@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,13 +10,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
   final List<Map<String, dynamic>> _todayMeals = [
     {
       'title': 'Breakfast',
       'time': '8:00 AM',
       'meal': 'Greek Yogurt with Berries',
       'calories': 320,
-      'image': 'breakfast',
+      'image': 'breakfast.png',
       'completed': true,
     },
     {
@@ -23,15 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'time': '12:30 PM',
       'meal': 'Grilled Chicken Salad',
       'calories': 450,
-      'image': 'lunch',
-      'completed': false,
-    },
-    {
-      'title': 'Dinner',
-      'time': '7:00 PM',
-      'meal': 'Salmon with Roasted Vegetables',
-      'calories': 580,
-      'image': 'dinner',
+      'image': 'lunch.png',
       'completed': false,
     },
     {
@@ -39,501 +33,343 @@ class _HomeScreenState extends State<HomeScreen> {
       'time': '4:00 PM',
       'meal': 'Apple with Almond Butter',
       'calories': 220,
-      'image': 'snack',
+      'image': 'snack.png',
+      'completed': false,
+    },
+    {
+      'title': 'Dinner',
+      'time': '7:00 PM',
+      'meal': 'Salmon with Roasted Vegetables',
+      'calories': 580,
+      'image': 'dinner.png',
       'completed': false,
     },
   ];
 
+  void _addMeal() {
+    final _titleController = TextEditingController();
+    final _timeController = TextEditingController();
+    final _mealController = TextEditingController();
+    final _caloriesController = TextEditingController();
+    final _imageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add New Meal'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: 'Meal Title'),
+                ),
+                TextField(
+                  controller: _timeController,
+                  decoration: const InputDecoration(labelText: 'Time'),
+                ),
+                TextField(
+                  controller: _mealController,
+                  decoration: const InputDecoration(labelText: 'Meal Description'),
+                ),
+                TextField(
+                  controller: _caloriesController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Calories'),
+                ),
+                TextField(
+                  controller: _imageController,
+                  decoration: const InputDecoration(labelText: 'Image Filename'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_titleController.text.isNotEmpty &&
+                    _timeController.text.isNotEmpty &&
+                    _mealController.text.isNotEmpty &&
+                    _caloriesController.text.isNotEmpty &&
+                    _imageController.text.isNotEmpty) {
+                  setState(() {
+                    _todayMeals.add({
+                      'title': _titleController.text,
+                      'time': _timeController.text,
+                      'meal': _mealController.text,
+                      'calories': int.tryParse(_caloriesController.text) ?? 0,
+                      'image': _imageController.text,
+                      'completed': false,
+                    });
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add Meal'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _toggleComplete(int index) {
+    setState(() {
+      _todayMeals[index]['completed'] = !_todayMeals[index]['completed'];
+    });
+  }
+
+  double _calculateProgress() {
+    if (_todayMeals.isEmpty) return 0;
+    final completed = _todayMeals.where((m) => m['completed'] == true).length;
+    return completed / _todayMeals.length;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final progress = _calculateProgress();
+    final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
+
+    final primaryColor = Colors.green.shade600;
+    final secondaryColor = Colors.amber.shade700;
+    final backgroundColor = Colors.grey.shade50;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.green,
+        title: const Text('Meal Planner', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Meal Planner',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // Show notifications
-            },
+            onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              // Show confirmation dialog
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to logout?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.grey.shade700),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Close dialog
-                        Navigator.pushReplacementNamed(context, '/'); // Go to login
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
-                      child: const Text('Logout'),
-                    ),
-                  ],
-                ),
-              );
-            },
+            icon: const Icon(Icons.person_outline),
+            onPressed: _showLogoutDialog,
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Stats Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildStatCard(
-                          icon: Icons.local_fire_department,
-                          value: '1,570',
-                          label: 'Calories',
-                          color: Colors.orange,
-                        ),
-                        _buildStatCard(
-                          icon: Icons.fitness_center,
-                          value: '65g',
-                          label: 'Protein',
-                          color: Colors.red.shade400,
-                        ),
-                        _buildStatCard(
-                          icon: Icons.water_drop,
-                          value: '1.6L',
-                          label: 'Water',
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Progress bar
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Daily Progress',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              '63%',
-                              style: TextStyle(
-                                color: Colors.green.shade100,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: 0.63,
-                            minHeight: 10,
-                            backgroundColor: Colors.green.shade800,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade100),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Today's Date and "Add Meal" button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Today\'s Meals',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                        Text(
-                          'Friday, April 4, 2025',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Add meal functionality
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Meal'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Meal cards for today
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _todayMeals.length,
-                itemBuilder: (context, index) {
-                  final meal = _todayMeals[index];
-                  return _buildMealCard(
-                    title: meal['title'],
-                    time: meal['time'],
-                    meal: meal['meal'],
-                    calories: meal['calories'],
-                    completed: meal['completed'],
-                    image: meal['image'],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              // Weekly Plan section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Weekly Meal Plan',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // View all weekly meals
-                      },
-                      child: const Text(
-                        'View All',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Weekly day selector
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _buildDayCard('Mon', '01', false),
-                    _buildDayCard('Tue', '02', false),
-                    _buildDayCard('Wed', '03', false),
-                    _buildDayCard('Thu', '04', true),
-                    _buildDayCard('Fri', '05', false),
-                    _buildDayCard('Sat', '06', false),
-                    _buildDayCard('Sun', '07', false),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Quick Actions section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Quick action buttons
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildQuickActionButton(
-                      icon: Icons.receipt_long,
-                      label: 'Recipes',
-                      color: Colors.orange.shade400,
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.shopping_basket,
-                      label: 'Grocery List',
-                      color: Colors.blue.shade400,
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.restaurant_menu,
-                      label: 'Favorites',
-                      color: Colors.red.shade400,
-                    ),
-                    _buildQuickActionButton(
-                      icon: Icons.bar_chart,
-                      label: 'Reports',
-                      color: Colors.purple.shade400,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
-            ],
-          ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildTopStats(progress, primaryColor, secondaryColor),
+            const SizedBox(height: 25),
+            _buildHeader(today, primaryColor),
+            const SizedBox(height: 10),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _todayMeals.length,
+              itemBuilder: (context, index) {
+                final meal = _todayMeals[index];
+                return _buildMealCard(index, meal, primaryColor);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add new meal plan
-        },
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add),
+        onPressed: _addMeal,
+        backgroundColor: secondaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+        elevation: 4,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey.shade500,
+        onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Planner',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Grocery',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Planner'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Grocery'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildTopStats(double progress, Color primaryColor, Color secondaryColor) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.green.shade100,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMealCard({
-    required String title,
-    required String time,
-    required String meal,
-    required int calories,
-    required bool completed,
-    required String image,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        color: primaryColor,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
         ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatCard(Icons.local_fire_department, '1570', 'Calories', Colors.deepOrange.shade400),
+              Container(height: 40, width: 1, color: Colors.white.withOpacity(0.2)),
+              _buildStatCard(Icons.fitness_center, '65g', 'Protein', Colors.red.shade300),
+              Container(height: 40, width: 1, color: Colors.white.withOpacity(0.2)),
+              _buildStatCard(Icons.water_drop, '1.6L', 'Water', Colors.blue.shade300),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Daily Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text('${(progress * 100).toInt()}%', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Stack(
+            children: [
+              Container(
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              Container(
+                height: 16,
+                width: MediaQuery.of(context).size.width * progress * 0.85,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [secondaryColor, Colors.amber.shade300],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String today, Color primaryColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Today\'s Meals', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+              const SizedBox(height: 4),
+              Text(today, style: TextStyle(color: Colors.grey.shade600)),
+            ],
+          ),
+          OutlinedButton.icon(
+            onPressed: _addMeal,
+            icon: Icon(Icons.add, size: 18, color: primaryColor),
+            label: Text('Add Meal', style: TextStyle(color: primaryColor)),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: primaryColor),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor) {
+    final isCompleted = meal['completed'] == true;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      elevation: isCompleted ? 0 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: isCompleted ? Colors.grey.shade300 : primaryColor.withOpacity(0.7)),
+      ),
+      color: isCompleted ? Colors.grey.shade50 : Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Meal indicator and time
-            Column(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _getMealIcon(title),
-                    color: Colors.green,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 60,
+                height: 60,
+                color: primaryColor.withOpacity(0.1),
+                child: Image.asset('assets/images/${meal['image']}', fit: BoxFit.cover),
+              ),
             ),
-            const SizedBox(width: 20),
-            // Meal details
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    meal,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        size: 16,
-                        color: Colors.orange.shade400,
-                      ),
-                      const SizedBox(width: 4),
                       Text(
-                        '$calories calories',
+                        meal['title'],
                         style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          decoration: isCompleted ? TextDecoration.lineThrough : null,
                         ),
+                      ),
+                      Text(
+                        meal['time'],
+                        style: TextStyle(color: isCompleted ? Colors.grey : primaryColor),
                       ),
                     ],
                   ),
+                  Text(
+                    meal['meal'],
+                    style: TextStyle(
+                      color: isCompleted ? Colors.grey : Colors.grey.shade800,
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withOpacity(isCompleted ? 0.1 : 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.local_fire_department, size: 14, color: Colors.deepOrange.shade300),
+                            const SizedBox(width: 4),
+                            Text('${meal['calories']} cal',
+                                style: TextStyle(
+                                  color: isCompleted ? Colors.grey : Colors.deepOrange.shade300,
+                                  fontSize: 12,
+                                )),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _toggleComplete(index),
+                        child: Icon(
+                          isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                          color: isCompleted ? Colors.green : primaryColor,
+                        ),
+                      ),
+                    ],
+                  )
                 ],
-              ),
-            ),
-            // Checkmark or edit button
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: completed ? Colors.green.shade100 : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                completed ? Icons.check : Icons.edit,
-                color: completed ? Colors.green : Colors.grey,
               ),
             ),
           ],
@@ -542,98 +378,39 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  IconData _getMealIcon(String mealType) {
-    switch (mealType.toLowerCase()) {
-      case 'breakfast':
-        return Icons.free_breakfast;
-      case 'lunch':
-        return Icons.lunch_dining;
-      case 'dinner':
-        return Icons.dinner_dining;
-      case 'snack':
-        return Icons.apple;
-      default:
-        return Icons.restaurant;
-    }
-  }
-
-  Widget _buildDayCard(String day, String date, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      width: 70,
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.green : Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            day,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.white : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                date,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.green : Colors.grey.shade800,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _buildStatCard(IconData icon, String value, String label, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 24),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+        const SizedBox(height: 4),
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8))),
+      ],
     );
   }
 
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(15),
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 28,
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
+            child: const Text('Logout'),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade700,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
