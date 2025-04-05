@@ -1,16 +1,22 @@
-# test_project
+# PlannerHut: Meal Planner
 
-A new Flutter project.
+**PlannerHut** is a meal planning app designed to help users organize their meals in a simple and efficient way. This project is built with Flutter and serves as a starting point for a Flutter application.
 
 ## Getting Started
 
 This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+### Prerequisites
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+To get started with this app, you need to have the following installed on your system:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
+- [Dart SDK](https://dart.dev/get-dart)
+- [Android Studio](https://developer.android.com/studio) (for Android development)
+- [Xcode](https://developer.apple.com/xcode/) (for iOS development)
+
+### Setup
+
+1. Clone the repository to your local machine:
+   ```bash
+   git clone https://github.com/your-username/plannerhut.git
