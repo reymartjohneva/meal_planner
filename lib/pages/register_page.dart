@@ -340,62 +340,7 @@ class RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
 
-                  // Social Registration Options
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'OR SIGN UP WITH',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _socialSignUpButton(
-                            icon: Icons.g_mobiledata_rounded,
-                            label: 'Google',
-                            color: Colors.red,
-                            onPressed: () {
-                              // Google sign up
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          _socialSignUpButton(
-                            icon: Icons.facebook,
-                            label: 'Facebook',
-                            color: Colors.blue,
-                            onPressed: () {
-                              // Facebook sign up
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          _socialSignUpButton(
-                            icon: Icons.apple,
-                            label: 'Apple',
-                            color: Colors.black,
-                            onPressed: () {
-                              // Apple sign up
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
 
                   // Login Option

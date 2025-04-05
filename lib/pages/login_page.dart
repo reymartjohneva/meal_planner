@@ -247,62 +247,9 @@ class LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 32),
-                  // Social login options
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'OR CONTINUE WITH',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _socialLoginButton(
-                            icon: Icons.g_mobiledata_rounded,
-                            label: 'Google',
-                            color: Colors.red,
-                            onPressed: () {
-                              // Google login
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          _socialLoginButton(
-                            icon: Icons.facebook,
-                            label: 'Facebook',
-                            color: Colors.blue,
-                            onPressed: () {
-                              // Facebook login
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          _socialLoginButton(
-                            icon: Icons.apple,
-                            label: 'Apple',
-                            color: Colors.black,
-                            onPressed: () {
-                              // Apple login
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+
                   // Sign up option
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
