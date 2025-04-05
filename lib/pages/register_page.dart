@@ -384,7 +384,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () { Navigator.pushNamed(context, '/login');},
                         child: const Text(
                           'Sign In',
                           style: TextStyle(
