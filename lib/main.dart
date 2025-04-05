@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/home_screen.dart';
+import 'pages/profile_page.dart';  // Import the Profile Page
 import 'firebase_options.dart';
 
 void main() async{
@@ -67,6 +68,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/register': (context) => const RegisterPage(),
         '/login': (context) => const LoginPage(),
+        '/profile': (context) => const ProfilePage(),
       },
     );
   }

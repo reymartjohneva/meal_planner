@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import 'profile_page.dart'; // Import the ProfilePage
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -154,7 +155,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.person_outline),
-            onPressed: _showLogoutDialog,
+            onPressed: () {
+              // Navigate to profile page
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfilePage()),
+              );
+            },
           ),
         ],
       ),
@@ -299,81 +306,16 @@ class _HomeScreenState extends State<HomeScreen> {
         side: BorderSide(color: isCompleted ? Colors.grey.shade300 : primaryColor.withOpacity(0.7)),
       ),
       color: isCompleted ? Colors.grey.shade50 : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 60,
-                height: 60,
-                color: primaryColor.withOpacity(0.1),
-                child: Image.asset('assets/images/${meal['image']}', fit: BoxFit.cover),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        meal['title'],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          decoration: isCompleted ? TextDecoration.lineThrough : null,
-                        ),
-                      ),
-                      Text(
-                        meal['time'],
-                        style: TextStyle(color: isCompleted ? Colors.grey : primaryColor),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    meal['meal'],
-                    style: TextStyle(
-                      color: isCompleted ? Colors.grey : Colors.grey.shade800,
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.deepOrange.withOpacity(isCompleted ? 0.1 : 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.local_fire_department, size: 14, color: Colors.deepOrange.shade300),
-                            const SizedBox(width: 4),
-                            Text('${meal['calories']} cal',
-                                style: TextStyle(
-                                  color: isCompleted ? Colors.grey : Colors.deepOrange.shade300,
-                                  fontSize: 12,
-                                )),
-                          ],
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => _toggleComplete(index),
-                        child: Icon(
-                          isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                          color: isCompleted ? Colors.green : primaryColor,
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ],
+      child: ListTile(
+        leading: CircleAvatar(
+          radius: 30,
+          backgroundImage: AssetImage('assets/images/${meal['image']}'),
+        ),
+        title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('${meal['time']} - ${meal['meal']}'),
+        trailing: IconButton(
+          icon: Icon(isCompleted ? Icons.check_circle : Icons.check_circle_outline, color: primaryColor),
+          onPressed: () => _toggleComplete(index),
         ),
       ),
     );
@@ -382,54 +324,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStatCard(IconData icon, String value, String label, Color color) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 24),
+        Icon(icon, color: color, size: 40),
         const SizedBox(height: 8),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
         const SizedBox(height: 4),
         Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8))),
       ],
     );
   }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _performLogout();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _performLogout() async {
-    try {
-      // Call the signOut method from your AuthService
-      await authService.value.signOut();
-
-      // Navigate to login screen after successful logout
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/');
-    } catch (e) {
-      // Handle any potential errors during logout
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error during logout: $e')),
-      );
-    }
-  }
 }
-
