@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'package:intl/intl.dart';
+
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -36,7 +39,7 @@ class ProfilePage extends StatelessWidget {
             // Logout button (UI only, no functionality)
             ElevatedButton(
               onPressed: () {
-                // No functionality here
+                _performLogout(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600, // Set background color here
@@ -47,5 +50,20 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Function to handle logout operation
+  Future<void> _performLogout(BuildContext context) async {
+    try {
+      await authService.value.signOut();
+
+
+      Navigator.pushReplacementNamed(context, '/');
+    } catch (e) {
+      // Handle any errors during logout
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error during logout: $e')),
+      );
+    }
   }
 }
