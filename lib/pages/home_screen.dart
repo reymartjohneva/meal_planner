@@ -198,11 +198,12 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Planner'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Grocery'),
+          BottomNavigationBarItem(icon: Icon(Icons.schedule_outlined), label: 'Planner'),  // Changed icon to schedule
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),  // Calendar icon for grocery
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
+
     );
   }
 
