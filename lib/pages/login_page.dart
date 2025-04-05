@@ -43,10 +43,8 @@ class _LoginPageState extends State<LoginPage> {
       String message;
       switch (e.code) {
         case 'user-not-found':
-          message = 'No user found with this email.';
-          break;
         case 'wrong-password':
-          message = 'Wrong password provided.';
+          message = 'Incorrect email or password.';
           break;
         case 'invalid-email':
           message = 'The email address is not valid.';
@@ -55,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
           message = 'This user account has been disabled.';
           break;
         default:
-          message = 'An error occurred: ${e.message}';
+          message = 'Email is not registered, please sign up.';
       }
       setState(() {
         _errorMessage = message;
