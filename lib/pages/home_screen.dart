@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
-import 'profile_page.dart'; // Import the ProfilePage
+import 'profile_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,138 +13,279 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Map<String, dynamic>> _todayMeals = [
-    {
-      'title': 'Breakfast',
-      'time': '8:00 AM',
-      'meal': 'Greek Yogurt with Berries',
-      'calories': 320,
-      'image': 'breakfast.png',
-      'completed': true,
-    },
-    {
-      'title': 'Lunch',
-      'time': '12:30 PM',
-      'meal': 'Grilled Chicken Salad',
-      'calories': 450,
-      'image': 'lunch.png',
-      'completed': false,
-    },
-    {
-      'title': 'Snack',
-      'time': '4:00 PM',
-      'meal': 'Apple with Almond Butter',
-      'calories': 220,
-      'image': 'snack.png',
-      'completed': false,
-    },
-    {
-      'title': 'Dinner',
-      'time': '7:00 PM',
-      'meal': 'Salmon with Roasted Vegetables',
-      'calories': 580,
-      'image': 'dinner.png',
-      'completed': false,
-    },
+  // Empty meal journal list
+  final List<Map<String, dynamic>> _mealJournal = [];
+
+  final List<String> _moodOptions = [
+    'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
+    'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
 
   void _addMeal() {
     final _titleController = TextEditingController();
     final _timeController = TextEditingController();
     final _mealController = TextEditingController();
-    final _caloriesController = TextEditingController();
+    final _notesController = TextEditingController();
     final _imageController = TextEditingController();
+    int? _satisfactionValue;
+    String? _selectedMood;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Meal'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Meal Title'),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Meal Experience'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(labelText: 'Meal Title'),
+                    ),
+                    TextField(
+                      controller: _timeController,
+                      decoration: const InputDecoration(labelText: 'Time'),
+                    ),
+                    TextField(
+                      controller: _mealController,
+                      decoration: const InputDecoration(labelText: 'What did you eat?'),
+                    ),
+                    const SizedBox(height: 15),
+                    const Text('How satisfied were you? (1-5)'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _satisfactionValue = index + 1;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _satisfactionValue == index + 1
+                                  ? Colors.teal.shade300
+                                  : Colors.grey.shade200,
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                color: _satisfactionValue == index + 1
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 15),
+                    const Text('How did you feel?'),
+                    DropdownButtonFormField<String>(
+                      value: _selectedMood,
+                      hint: const Text('Select mood'),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedMood = newValue;
+                        });
+                      },
+                      items: _moodOptions
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes on your experience',
+                        hintText: 'How did the meal make you feel?',
+                      ),
+                    ),
+                    TextField(
+                      controller: _imageController,
+                      decoration: const InputDecoration(labelText: 'Image Filename'),
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: _timeController,
-                  decoration: const InputDecoration(labelText: 'Time'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                TextField(
-                  controller: _mealController,
-                  decoration: const InputDecoration(labelText: 'Meal Description'),
-                ),
-                TextField(
-                  controller: _caloriesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Calories'),
-                ),
-                TextField(
-                  controller: _imageController,
-                  decoration: const InputDecoration(labelText: 'Image Filename'),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_titleController.text.isNotEmpty &&
+                        _timeController.text.isNotEmpty &&
+                        _mealController.text.isNotEmpty) {
+                      setState(() {
+                        _mealJournal.add({
+                          'title': _titleController.text,
+                          'time': _timeController.text,
+                          'meal': _mealController.text,
+                          'satisfaction': _satisfactionValue,
+                          'mood': _selectedMood,
+                          'notes': _notesController.text,
+                          'image': _imageController.text.isNotEmpty
+                              ? _imageController.text
+                              : 'default_meal.png',
+                          'logged': false,
+                        });
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Add Experience'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_titleController.text.isNotEmpty &&
-                    _timeController.text.isNotEmpty &&
-                    _mealController.text.isNotEmpty &&
-                    _caloriesController.text.isNotEmpty &&
-                    _imageController.text.isNotEmpty) {
-                  setState(() {
-                    _todayMeals.add({
-                      'title': _titleController.text,
-                      'time': _timeController.text,
-                      'meal': _mealController.text,
-                      'calories': int.tryParse(_caloriesController.text) ?? 0,
-                      'image': _imageController.text,
-                      'completed': false,
-                    });
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Add Meal'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
-  void _toggleComplete(int index) {
-    setState(() {
-      _todayMeals[index]['completed'] = !_todayMeals[index]['completed'];
-    });
+  void _logMeal(int index) {
+    if (_mealJournal[index]['satisfaction'] == null) {
+      _showSatisfactionDialog(index);
+    } else {
+      setState(() {
+        _mealJournal[index]['logged'] = !_mealJournal[index]['logged'];
+      });
+    }
   }
 
-  double _calculateProgress() {
-    if (_todayMeals.isEmpty) return 0;
-    final completed = _todayMeals.where((m) => m['completed'] == true).length;
-    return completed / _todayMeals.length;
+  void _showSatisfactionDialog(int index) {
+    int? _satisfactionValue = _mealJournal[index]['satisfaction'];
+    String? _selectedMood = _mealJournal[index]['mood'];
+    final _notesController = TextEditingController(text: _mealJournal[index]['notes'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('How was your meal?'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('How satisfied were you? (1-5)'),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(5, (index) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _satisfactionValue = index + 1;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _satisfactionValue == index + 1
+                                  ? Colors.teal.shade300
+                                  : Colors.grey.shade200,
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                color: _satisfactionValue == index + 1
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 15),
+                    const Text('How did you feel?'),
+                    DropdownButtonFormField<String>(
+                      value: _selectedMood,
+                      hint: const Text('Select mood'),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedMood = newValue;
+                        });
+                      },
+                      items: _moodOptions
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes on your experience',
+                        hintText: 'How did the meal make you feel?',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Skip'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_satisfactionValue != null) {
+                      this.setState(() {
+                        _mealJournal[index]['satisfaction'] = _satisfactionValue;
+                        _mealJournal[index]['mood'] = _selectedMood;
+                        _mealJournal[index]['notes'] = _notesController.text;
+                        _mealJournal[index]['logged'] = true;
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  int _getLoggedCount() {
+    return _mealJournal.where((m) => m['logged'] == true).length;
   }
 
   @override
   Widget build(BuildContext context) {
-    final progress = _calculateProgress();
+    final loggedCount = _getLoggedCount();
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
-    final primaryColor = Colors.green.shade600;
-    final secondaryColor = Colors.amber.shade700;
+    final primaryColor = Colors.teal.shade600;
+    final secondaryColor = Colors.amber.shade600;
     final backgroundColor = Colors.grey.shade50;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Meal Planner', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('PlannerHut',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -156,7 +297,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () {
-              // Navigate to profile page
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ProfilePage()),
@@ -168,16 +308,18 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildTopStats(progress, primaryColor, secondaryColor),
+            _buildWellnessInsights(primaryColor, secondaryColor),
             const SizedBox(height: 25),
             _buildHeader(today, primaryColor),
             const SizedBox(height: 10),
-            ListView.builder(
+            _mealJournal.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _todayMeals.length,
+              itemCount: _mealJournal.length,
               itemBuilder: (context, index) {
-                final meal = _todayMeals[index];
+                final meal = _mealJournal[index];
                 return _buildMealCard(index, meal, primaryColor);
               },
             ),
@@ -197,17 +339,48 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey.shade500,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule_outlined), label: 'Planner'),  // Changed icon to schedule
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),  // Calendar icon for grocery
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Journal'),
+          BottomNavigationBarItem(icon: Icon(Icons.self_improvement_outlined), label: 'Wellness'),
+          BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Community'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
-
     );
   }
 
-  Widget _buildTopStats(double progress, Color primaryColor, Color secondaryColor) {
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: Column(
+        children: [
+          Icon(
+              Icons.restaurant_outlined,
+              size: 80,
+              color: Colors.grey.shade400
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No meals added yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap the + button to add your first meal experience',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
@@ -224,45 +397,52 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Your Wellness Journey',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatCard(Icons.local_fire_department, '1570', 'Calories', Colors.deepOrange.shade400),
+              _buildInsightCard(Icons.favorite_outline, 'Body Trust', 'Developing', Colors.pink.shade300),
               Container(height: 40, width: 1, color: Colors.white.withOpacity(0.2)),
-              _buildStatCard(Icons.fitness_center, '65g', 'Protein', Colors.red.shade300),
+              _buildInsightCard(Icons.self_improvement_outlined, 'Mindfulness', 'Growing', Colors.amber.shade300),
               Container(height: 40, width: 1, color: Colors.white.withOpacity(0.2)),
-              _buildStatCard(Icons.water_drop, '1.6L', 'Water', Colors.blue.shade300),
+              _buildInsightCard(Icons.emoji_emotions_outlined, 'Satisfaction', 'Neutral', Colors.blue.shade300),
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Daily Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text('${(progress * 100).toInt()}%', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Stack(
-            children: [
-              Container(
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              Container(
-                height: 16,
-                width: MediaQuery.of(context).size.width * progress * 0.85,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [secondaryColor, Colors.amber.shade300],
+          Card(
+            color: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Today\'s Wellness Tip',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -278,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Today\'s Meals', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+              const Text('Meal Journal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
               const SizedBox(height: 4),
               Text(today, style: TextStyle(color: Colors.grey.shade600)),
             ],
@@ -298,38 +478,169 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor) {
-    final isCompleted = meal['completed'] == true;
+    final isLogged = meal['logged'] == true;
+
+    // Icon and color for satisfaction rating
+    IconData satisfactionIcon = Icons.sentiment_neutral;
+    Color satisfactionColor = Colors.grey;
+
+    if (meal['satisfaction'] != null) {
+      if (meal['satisfaction'] >= 4) {
+        satisfactionIcon = Icons.sentiment_very_satisfied;
+        satisfactionColor = Colors.green;
+      } else if (meal['satisfaction'] >= 3) {
+        satisfactionIcon = Icons.sentiment_satisfied;
+        satisfactionColor = Colors.amber;
+      } else if (meal['satisfaction'] >= 2) {
+        satisfactionIcon = Icons.sentiment_neutral;
+        satisfactionColor = Colors.orange;
+      } else {
+        satisfactionIcon = Icons.sentiment_dissatisfied;
+        satisfactionColor = Colors.red;
+      }
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      elevation: isCompleted ? 0 : 2,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isCompleted ? Colors.grey.shade300 : primaryColor.withOpacity(0.7)),
+        side: BorderSide(
+          color: isLogged ? Colors.teal.shade200 : Colors.grey.shade300,
+          width: isLogged ? 2 : 1,
+        ),
       ),
-      color: isCompleted ? Colors.grey.shade50 : Colors.white,
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 30,
-          backgroundImage: AssetImage('assets/images/${meal['image']}'),
-        ),
-        title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${meal['time']} - ${meal['meal']}'),
-        trailing: IconButton(
-          icon: Icon(isCompleted ? Icons.check_circle : Icons.check_circle_outline, color: primaryColor),
-          onPressed: () => _toggleComplete(index),
-        ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              radius: 30,
+              backgroundImage: AssetImage('assets/images/${meal['image']}'),
+            ),
+            title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${meal['time']} - ${meal['meal']}'),
+                if (isLogged && meal['mood'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('Mood: ${meal['mood']}',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ),
+              ],
+            ),
+            trailing: isLogged
+                ? Icon(satisfactionIcon, color: satisfactionColor, size: 30)
+                : ElevatedButton(
+              onPressed: () => _logMeal(index),
+              child: const Text('Log'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+            onTap: () => _showMealDetails(meal),
+          ),
+          if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  Text(
+                    '${meal['notes']}',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey.shade700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatCard(IconData icon, String value, String label, Color color) {
+  void _showMealDetails(Map<String, dynamic> meal) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(meal['title']),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (meal['image'] != null)
+                  Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/${meal['image']}'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Text('Time: ${meal['time']}'),
+                Text('Food: ${meal['meal']}'),
+                if (meal['satisfaction'] != null)
+                  Text('Satisfaction: ${meal['satisfaction']}/5'),
+                if (meal['mood'] != null)
+                  Text('Mood: ${meal['mood']}'),
+                if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text('Notes:'),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(meal['notes']),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            if (!meal['logged'])
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _logMeal(_mealJournal.indexOf(meal));
+                },
+                child: const Text('Log Meal'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInsightCard(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 40),
         const SizedBox(height: 8),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8))),
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
       ],
     );
   }
