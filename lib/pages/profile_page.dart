@@ -1,14 +1,80 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  User? _currentUser;
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      _currentUser = authService.value.currentUser;
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load user data: $e';
+      });
+    }
+  }
+
+  String _getInitials(String? displayName) {
+    if (displayName == null || displayName.isEmpty) return '?';
+
+    final nameParts = displayName.trim().split(' ');
+    if (nameParts.isEmpty) return '?';
+
+    if (nameParts.length == 1) {
+      return nameParts[0][0].toUpperCase();
+    }
+
+    return '${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}'.toUpperCase();
+  }
+
+  // Get color based on user name (consistent for same user)
+  Color _getAvatarColor(String? displayName) {
+    if (displayName == null || displayName.isEmpty) {
+      return Colors.blueGrey;
+    }
+
+    // Generate a color based on the first character of the name
+    // This ensures the same user always gets the same color
+    final colorIndex = displayName.codeUnitAt(0) % Colors.primaries.length;
+    return Colors.primaries[colorIndex];
+  }
+
+  @override
   Widget build(BuildContext context) {
+
+    // Get user info
+    final userName = _currentUser?.displayName ?? 'User';
+    final userEmail = _currentUser?.email ?? 'No email available';
+    final userInitials = _getInitials(userName);
+    final avatarColor = _getAvatarColor(userName);
+
     return Scaffold(
-      body: CustomScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage.isNotEmpty
+          ? Center(child: Text(_errorMessage))
+          : CustomScrollView(
         slivers: [
           // Custom app bar with gradient
           SliverAppBar(
@@ -52,7 +118,6 @@ class ProfilePage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
                 children: [
-                  // Profile picture with decorative ring
                   Transform.translate(
                     offset: Offset(0, -60),
                     child: Container(
@@ -67,16 +132,29 @@ class ProfilePage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
+                      child: _currentUser?.photoURL != null
+                        ? CircleAvatar(
                         radius: 70,
-                        backgroundImage: AssetImage('assets/images/profile_picture.jpg'),
-                      ),
+                        backgroundImage: NetworkImage(_currentUser!.photoURL!),
+                        )
+                          : CircleAvatar(
+                            radius: 70,
+                            backgroundColor: avatarColor,
+                            child: Text(
+                              userInitials,
+                              style: TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                     ),
                   ),
 
                   // Name with custom styling
                   Text(
-                    'Ainor Jamal',
+                    userName,
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -89,7 +167,7 @@ class ProfilePage extends StatelessWidget {
 
                   // Bio with improved typography
                   Text(
-                    'IT Student at Caraga State University',
+                    userEmail,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
