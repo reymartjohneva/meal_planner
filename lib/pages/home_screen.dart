@@ -35,40 +35,136 @@ class _HomeScreenState extends State<HomeScreen> {
     final _caloriesController = TextEditingController();
     TimeOfDay _selectedTime = TimeOfDay.now();
 
-    Future<void> _selectTime(BuildContext context) async {
-      final TimeOfDay? picked = await showTimePicker(
-        context: context,
-        initialTime: _selectedTime,
-      );
-      if (picked != null && picked != _selectedTime) {
-        setState(() {
-          _selectedTime = picked;
-        });
+    _showMealForm(
+      context: context,
+      titleController: _titleController,
+      descriptionController: _descriptionController,
+      caloriesController: _caloriesController,
+      selectedTime: _selectedTime,
+      onSave: () {
+        if (_titleController.text.isNotEmpty &&
+            _descriptionController.text.isNotEmpty &&
+            _caloriesController.text.isNotEmpty) {
+          setState(() {
+            _mealJournal.add({
+              'title': _titleController.text,
+              'time': _selectedTime.format(context),
+              'meal': _descriptionController.text,
+              'calories': int.parse(_caloriesController.text),
+              'logged': false,
+            });
+          });
+          Navigator.pop(context);
+        }
+      },
+      isEditing: false,
+    );
+  }
+
+  void _editMeal(int index) {
+    final meal = _mealJournal[index];
+    final _titleController = TextEditingController(text: meal['title']);
+    final _descriptionController = TextEditingController(text: meal['meal']);
+    final _caloriesController = TextEditingController(text: meal['calories'].toString());
+
+    // Parse the time string back to TimeOfDay
+    final timeStr = meal['time'];
+    TimeOfDay _selectedTime;
+    try {
+      final format = RegExp(r'(\d+):(\d+) ([AP]M)');
+      final match = format.firstMatch(timeStr);
+      if (match != null) {
+        int hour = int.parse(match.group(1) ?? '12');
+        final int minute = int.parse(match.group(2) ?? '0');
+        final String period = match.group(3) ?? 'AM';
+
+        // Convert from 12-hour to 24-hour format for TimeOfDay
+        if (period == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+
+        _selectedTime = TimeOfDay(hour: hour, minute: minute);
+      } else {
+        _selectedTime = TimeOfDay.now();
       }
+    } catch (e) {
+      _selectedTime = TimeOfDay.now();
     }
 
+    _showMealForm(
+      context: context,
+      titleController: _titleController,
+      descriptionController: _descriptionController,
+      caloriesController: _caloriesController,
+      selectedTime: _selectedTime,
+      onSave: () {
+        if (_titleController.text.isNotEmpty &&
+            _descriptionController.text.isNotEmpty &&
+            _caloriesController.text.isNotEmpty) {
+          setState(() {
+            _mealJournal[index] = {
+              'title': _titleController.text,
+              'time': _selectedTime.format(context),
+              'meal': _descriptionController.text,
+              'calories': int.parse(_caloriesController.text),
+              'logged': meal['logged'],
+              'satisfaction': meal['satisfaction'],
+              'mood': meal['mood'],
+              'notes': meal['notes'],
+            };
+          });
+          Navigator.pop(context);
+        }
+      },
+      isEditing: true,
+    );
+  }
+
+  void _showMealForm({
+    required BuildContext context,
+    required TextEditingController titleController,
+    required TextEditingController descriptionController,
+    required TextEditingController caloriesController,
+    required TimeOfDay selectedTime,
+    required VoidCallback onSave,
+    required bool isEditing,
+  }) {
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            Future<void> _selectTime(BuildContext context) async {
+              final TimeOfDay? picked = await showTimePicker(
+                context: context,
+                initialTime: selectedTime,
+              );
+              if (picked != null && picked != selectedTime) {
+                setState(() {
+                  selectedTime = picked;
+                });
+              }
+            }
+
             return AlertDialog(
-              title: const Text('Add Meal'),
+              title: Text(isEditing ? 'Edit Meal' : 'Add Meal'),
               content: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
-                      controller: _titleController,
+                      controller: titleController,
                       decoration: const InputDecoration(labelText: 'Meal Title'),
                     ),
                     TextField(
-                      controller: _descriptionController,
+                      controller: descriptionController,
                       decoration: const InputDecoration(labelText: 'Description'),
                       maxLines: 2,
                     ),
                     TextField(
-                      controller: _caloriesController,
+                      controller: caloriesController,
                       decoration: const InputDecoration(labelText: 'Calories'),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
@@ -82,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         TextButton(
                           onPressed: () => _selectTime(context),
                           child: Text(
-                            _selectedTime.format(context),
+                            selectedTime.format(context),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                             ),
@@ -99,23 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_titleController.text.isNotEmpty &&
-                        _descriptionController.text.isNotEmpty &&
-                        _caloriesController.text.isNotEmpty) {
-                      this.setState(() {
-                        _mealJournal.add({
-                          'title': _titleController.text,
-                          'time': _selectedTime.format(context),
-                          'meal': _descriptionController.text,
-                          'calories': int.parse(_caloriesController.text),
-                          'logged': false,
-                        });
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Add Meal'),
+                  onPressed: onSave,
+                  child: Text(isEditing ? 'Update' : 'Add Meal'),
                 ),
               ],
             );
@@ -236,6 +317,34 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       },
+    );
+  }
+
+  void _deleteMeal(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Meal'),
+        content: const Text('Are you sure you want to delete this meal?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _mealJournal.removeAt(index);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -548,20 +657,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
               ],
             ),
-            trailing: isLogged
-                ? Icon(satisfactionIcon, color: satisfactionColor, size: 30)
-                : ElevatedButton(
-              onPressed: () => _logMeal(index),
-              child: const Text('Log'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLogged)
+                  Icon(satisfactionIcon, color: satisfactionColor, size: 24)
+                else
+                  ElevatedButton(
+                    onPressed: () => _logMeal(index),
+                    child: const Text('Log'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                PopupMenuButton(
+                  icon: Icon(Icons.more_vert, color: subtitleColor),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 20, color: primaryColor),
+                          const SizedBox(width: 8),
+                          const Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete, size: 20, color: Colors.red),
+                          const SizedBox(width: 8),
+                          const Text('Delete'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _editMeal(index);
+                    } else if (value == 'delete') {
+                      _deleteMeal(index);
+                    }
+                  },
                 ),
-              ),
+              ],
             ),
-            onTap: () => _showMealDetails(meal),
+            onTap: () => _showMealDetails(meal, index),
           ),
           if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
             Padding(
@@ -586,10 +733,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showMealDetails(Map<String, dynamic> meal) {
+  void _showMealDetails(Map<String, dynamic> meal, int index) {
     final textColor = _isDarkMode ? Colors.white : Colors.black;
     final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
     final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100;
+    final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
 
     showDialog(
       context: context,
@@ -628,19 +776,28 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: TextStyle(color: _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600)),
+              child: Text('Close', style: TextStyle(color: primaryColor)),
             ),
             if (!meal['logged'])
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  _logMeal(_mealJournal.indexOf(meal));
+                  _logMeal(index);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600,
+                  backgroundColor: primaryColor,
                 ),
                 child: const Text('Log Meal'),
               ),
+            IconButton(
+              icon: const Icon(Icons.edit),
+              color: primaryColor,
+              onPressed: () {
+                Navigator.pop(context);
+                _editMeal(index);
+              },
+              tooltip: 'Edit Meal',
+            ),
           ],
         );
       },
