@@ -12,6 +12,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  bool _isDarkMode = false; // Track dark mode state
 
   // Empty meal journal list
   final List<Map<String, dynamic>> _mealJournal = [];
@@ -21,134 +22,73 @@ class _HomeScreenState extends State<HomeScreen> {
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
 
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
+
   void _addMeal() {
     final _titleController = TextEditingController();
     final _timeController = TextEditingController();
     final _mealController = TextEditingController();
-    final _notesController = TextEditingController();
     final _imageController = TextEditingController();
-    int? _satisfactionValue;
-    String? _selectedMood;
 
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Add Meal Experience'),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Meal Title'),
-                    ),
-                    TextField(
-                      controller: _timeController,
-                      decoration: const InputDecoration(labelText: 'Time'),
-                    ),
-                    TextField(
-                      controller: _mealController,
-                      decoration: const InputDecoration(labelText: 'What did you eat?'),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text('How satisfied were you? (1-5)'),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(5, (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _satisfactionValue = index + 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _satisfactionValue == index + 1
-                                  ? Colors.teal.shade300
-                                  : Colors.grey.shade200,
-                            ),
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                color: _satisfactionValue == index + 1
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text('How did you feel?'),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMood,
-                      hint: const Text('Select mood'),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedMood = newValue;
-                        });
-                      },
-                      items: _moodOptions
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    TextField(
-                      controller: _notesController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes on your experience',
-                        hintText: 'How did the meal make you feel?',
-                      ),
-                    ),
-                    TextField(
-                      controller: _imageController,
-                      decoration: const InputDecoration(labelText: 'Image Filename'),
-                    ),
-                  ],
+        return AlertDialog(
+          title: const Text('Add Meal'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: 'Meal Title'),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                TextField(
+                  controller: _timeController,
+                  decoration: const InputDecoration(labelText: 'Time'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_titleController.text.isNotEmpty &&
-                        _timeController.text.isNotEmpty &&
-                        _mealController.text.isNotEmpty) {
-                      setState(() {
-                        _mealJournal.add({
-                          'title': _titleController.text,
-                          'time': _timeController.text,
-                          'meal': _mealController.text,
-                          'satisfaction': _satisfactionValue,
-                          'mood': _selectedMood,
-                          'notes': _notesController.text,
-                          'image': _imageController.text.isNotEmpty
-                              ? _imageController.text
-                              : 'default_meal.png',
-                          'logged': false,
-                        });
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Add Experience'),
+                TextField(
+                  controller: _mealController,
+                  decoration: const InputDecoration(labelText: 'What did you eat?'),
+                ),
+                TextField(
+                  controller: _imageController,
+                  decoration: const InputDecoration(labelText: 'Image Filename'),
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_titleController.text.isNotEmpty &&
+                    _timeController.text.isNotEmpty &&
+                    _mealController.text.isNotEmpty) {
+                  setState(() {
+                    _mealJournal.add({
+                      'title': _titleController.text,
+                      'time': _timeController.text,
+                      'meal': _mealController.text,
+                      'image': _imageController.text.isNotEmpty
+                          ? _imageController.text
+                          : 'default_meal.png',
+                      'logged': false,
+                    });
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add Meal'),
+            ),
+          ],
         );
       },
     );
@@ -277,9 +217,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final loggedCount = _getLoggedCount();
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
-    final primaryColor = Colors.teal.shade600;
-    final secondaryColor = Colors.amber.shade600;
-    final backgroundColor = Colors.grey.shade50;
+    // Theme colors based on dark mode state
+    final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
+    final secondaryColor = _isDarkMode ? Colors.amber.shade400 : Colors.amber.shade600;
+    final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
+    final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
+    final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -290,6 +234,12 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          // Theme toggle button
+          IconButton(
+            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: _toggleTheme,
+            tooltip: _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
@@ -308,19 +258,19 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildWellnessInsights(primaryColor, secondaryColor),
+            _buildWellnessInsights(primaryColor, secondaryColor, textColor),
             const SizedBox(height: 25),
-            _buildHeader(today, primaryColor),
+            _buildHeader(today, primaryColor, textColor, subtitleColor),
             const SizedBox(height: 10),
             _mealJournal.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(subtitleColor)
                 : ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _mealJournal.length,
               itemBuilder: (context, index) {
                 final meal = _mealJournal[index];
-                return _buildMealCard(index, meal, primaryColor);
+                return _buildMealCard(index, meal, primaryColor, cardColor, textColor, subtitleColor);
               },
             ),
             const SizedBox(height: 20),
@@ -336,7 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: primaryColor,
-        unselectedItemColor: Colors.grey.shade500,
+        unselectedItemColor: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+        backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Journal'),
@@ -348,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color subtitleColor) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       child: Column(
@@ -356,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
               Icons.restaurant_outlined,
               size: 80,
-              color: Colors.grey.shade400
+              color: _isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400
           ),
           const SizedBox(height: 16),
           Text(
@@ -364,15 +315,15 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
+              color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap the + button to add your first meal experience',
+            'Tap the + button to add your first meal',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: subtitleColor,
             ),
           ),
         ],
@@ -380,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor) {
+  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
@@ -418,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 24),
           Card(
-            color: Colors.white,
+            color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -436,9 +387,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
-                    style: TextStyle(fontSize: 14),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: textColor,
+                    ),
                   ),
                 ],
               ),
@@ -449,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(String today, Color primaryColor) {
+  Widget _buildHeader(String today, Color primaryColor, Color textColor, Color subtitleColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -458,9 +412,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Meal Journal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+              Text(
+                  'Meal Journal',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: textColor,
+                  )
+              ),
               const SizedBox(height: 4),
-              Text(today, style: TextStyle(color: Colors.grey.shade600)),
+              Text(
+                  today,
+                  style: TextStyle(color: subtitleColor)
+              ),
             ],
           ),
           OutlinedButton.icon(
@@ -477,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor) {
+  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor, Color cardColor, Color textColor, Color subtitleColor) {
     final isLogged = meal['logged'] == true;
 
     // Icon and color for satisfaction rating
@@ -503,10 +467,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       elevation: 2,
+      color: cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isLogged ? Colors.teal.shade200 : Colors.grey.shade300,
+          color: isLogged ? Colors.teal.shade200 : _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
           width: isLogged ? 2 : 1,
         ),
       ),
@@ -517,16 +482,29 @@ class _HomeScreenState extends State<HomeScreen> {
               radius: 30,
               backgroundImage: AssetImage('assets/images/${meal['image']}'),
             ),
-            title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+                meal['title'],
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                )
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${meal['time']} - ${meal['meal']}'),
+                Text(
+                  '${meal['time']} - ${meal['meal']}',
+                  style: TextStyle(color: subtitleColor),
+                ),
                 if (isLogged && meal['mood'] != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('Mood: ${meal['mood']}',
-                      style: TextStyle(fontStyle: FontStyle.italic),
+                    child: Text(
+                      'Mood: ${meal['mood']}',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: subtitleColor,
+                      ),
                     ),
                   ),
               ],
@@ -552,12 +530,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Divider(),
+                  Divider(color: _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
                   Text(
                     '${meal['notes']}',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
-                      color: Colors.grey.shade700,
+                      color: subtitleColor,
                       fontSize: 13,
                     ),
                   ),
@@ -570,11 +548,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showMealDetails(Map<String, dynamic> meal) {
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
+    final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
+    final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(meal['title']),
+          backgroundColor: cardColor,
+          title: Text(meal['title'], style: TextStyle(color: textColor)),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,22 +576,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                Text('Time: ${meal['time']}'),
-                Text('Food: ${meal['meal']}'),
+                Text('Time: ${meal['time']}', style: TextStyle(color: textColor)),
+                Text('Food: ${meal['meal']}', style: TextStyle(color: textColor)),
                 if (meal['satisfaction'] != null)
-                  Text('Satisfaction: ${meal['satisfaction']}/5'),
+                  Text('Satisfaction: ${meal['satisfaction']}/5', style: TextStyle(color: textColor)),
                 if (meal['mood'] != null)
-                  Text('Mood: ${meal['mood']}'),
+                  Text('Mood: ${meal['mood']}', style: TextStyle(color: textColor)),
                 if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  const Text('Notes:'),
+                  Text('Notes:', style: TextStyle(color: textColor)),
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: backgroundColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(meal['notes']),
+                    child: Text(meal['notes'], style: TextStyle(color: textColor)),
                   ),
                 ],
               ],
@@ -617,7 +600,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text('Close', style: TextStyle(color: _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600)),
             ),
             if (!meal['logged'])
               ElevatedButton(
@@ -625,6 +608,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context);
                   _logMeal(_mealJournal.indexOf(meal));
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600,
+                ),
                 child: const Text('Log Meal'),
               ),
           ],
