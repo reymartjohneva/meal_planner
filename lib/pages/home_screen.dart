@@ -33,14 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final _titleController = TextEditingController();
     final _descriptionController = TextEditingController();
     final _caloriesController = TextEditingController();
-    TimeOfDay _selectedTime = TimeOfDay.now();
+
+    // Use a wrapper for the TimeOfDay that can be updated
+    final _timeHolder = _TimeHolder(TimeOfDay.now());
 
     _showMealForm(
       context: context,
       titleController: _titleController,
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
-      selectedTime: _selectedTime,
+      timeHolder: _timeHolder,
       onSave: () {
         if (_titleController.text.isNotEmpty &&
             _descriptionController.text.isNotEmpty &&
@@ -48,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _mealJournal.add({
               'title': _titleController.text,
-              'time': _selectedTime.format(context),
+              'time': _timeHolder.time.format(context),
               'meal': _descriptionController.text,
               'calories': int.parse(_caloriesController.text),
               'logged': false,
@@ -93,12 +95,15 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedTime = TimeOfDay.now();
     }
 
+    // Create a time holder with the parsed time
+    final _timeHolder = _TimeHolder(_selectedTime);
+
     _showMealForm(
       context: context,
       titleController: _titleController,
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
-      selectedTime: _selectedTime,
+      timeHolder: _timeHolder,
       onSave: () {
         if (_titleController.text.isNotEmpty &&
             _descriptionController.text.isNotEmpty &&
@@ -106,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _mealJournal[index] = {
               'title': _titleController.text,
-              'time': _selectedTime.format(context),
+              'time': _timeHolder.time.format(context),
               'meal': _descriptionController.text,
               'calories': int.parse(_caloriesController.text),
               'logged': meal['logged'],
@@ -127,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required TextEditingController titleController,
     required TextEditingController descriptionController,
     required TextEditingController caloriesController,
-    required TimeOfDay selectedTime,
+    required _TimeHolder timeHolder,
     required VoidCallback onSave,
     required bool isEditing,
   }) {
@@ -139,11 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Future<void> _selectTime(BuildContext context) async {
               final TimeOfDay? picked = await showTimePicker(
                 context: context,
-                initialTime: selectedTime,
+                initialTime: timeHolder.time,
               );
-              if (picked != null && picked != selectedTime) {
+
+              if (picked != null) {
                 setState(() {
-                  selectedTime = picked;
+                  timeHolder.time = picked;
                 });
               }
             }
@@ -178,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         TextButton(
                           onPressed: () => _selectTime(context),
                           child: Text(
-                            selectedTime.format(context),
+                            timeHolder.time.format(context),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                             ),
@@ -815,4 +821,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+}
+
+// Helper class to hold a mutable TimeOfDay
+class _TimeHolder {
+  TimeOfDay time;
+
+  _TimeHolder(this.time);
 }
