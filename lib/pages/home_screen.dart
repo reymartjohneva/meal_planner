@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import 'profile_page.dart';
@@ -30,65 +31,95 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addMeal() {
     final _titleController = TextEditingController();
-    final _timeController = TextEditingController();
-    final _mealController = TextEditingController();
-    final _imageController = TextEditingController();
+    final _descriptionController = TextEditingController();
+    final _caloriesController = TextEditingController();
+    TimeOfDay _selectedTime = TimeOfDay.now();
+
+    Future<void> _selectTime(BuildContext context) async {
+      final TimeOfDay? picked = await showTimePicker(
+        context: context,
+        initialTime: _selectedTime,
+      );
+      if (picked != null && picked != _selectedTime) {
+        setState(() {
+          _selectedTime = picked;
+        });
+      }
+    }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Meal'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Meal Title'),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Meal'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(labelText: 'Meal Title'),
+                    ),
+                    TextField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                      maxLines: 2,
+                    ),
+                    TextField(
+                      controller: _caloriesController,
+                      decoration: const InputDecoration(labelText: 'Calories'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        const Text('Time: '),
+                        TextButton(
+                          onPressed: () => _selectTime(context),
+                          child: Text(
+                            _selectedTime.format(context),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                TextField(
-                  controller: _timeController,
-                  decoration: const InputDecoration(labelText: 'Time'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                TextField(
-                  controller: _mealController,
-                  decoration: const InputDecoration(labelText: 'What did you eat?'),
-                ),
-                TextField(
-                  controller: _imageController,
-                  decoration: const InputDecoration(labelText: 'Image Filename'),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_titleController.text.isNotEmpty &&
+                        _descriptionController.text.isNotEmpty &&
+                        _caloriesController.text.isNotEmpty) {
+                      this.setState(() {
+                        _mealJournal.add({
+                          'title': _titleController.text,
+                          'time': _selectedTime.format(context),
+                          'meal': _descriptionController.text,
+                          'calories': int.parse(_caloriesController.text),
+                          'logged': false,
+                        });
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Add Meal'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_titleController.text.isNotEmpty &&
-                    _timeController.text.isNotEmpty &&
-                    _mealController.text.isNotEmpty) {
-                  setState(() {
-                    _mealJournal.add({
-                      'title': _titleController.text,
-                      'time': _timeController.text,
-                      'meal': _mealController.text,
-                      'image': _imageController.text.isNotEmpty
-                          ? _imageController.text
-                          : 'default_meal.png',
-                      'logged': false,
-                    });
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Add Meal'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -480,7 +511,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: CircleAvatar(
               radius: 30,
-              backgroundImage: AssetImage('assets/images/${meal['image']}'),
+              backgroundColor: primaryColor.withOpacity(0.2),
+              child: Icon(
+                Icons.restaurant,
+                color: primaryColor,
+              ),
             ),
             title: Text(
                 meal['title'],
@@ -494,6 +529,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   '${meal['time']} - ${meal['meal']}',
+                  style: TextStyle(color: subtitleColor),
+                ),
+                Text(
+                  'Calories: ${meal['calories']}',
                   style: TextStyle(color: subtitleColor),
                 ),
                 if (isLogged && meal['mood'] != null)
@@ -563,21 +602,10 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (meal['image'] != null)
-                  Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/${meal['image']}'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 16),
                 Text('Time: ${meal['time']}', style: TextStyle(color: textColor)),
-                Text('Food: ${meal['meal']}', style: TextStyle(color: textColor)),
+                Text('Description: ${meal['meal']}', style: TextStyle(color: textColor)),
+                Text('Calories: ${meal['calories']}', style: TextStyle(color: textColor)),
                 if (meal['satisfaction'] != null)
                   Text('Satisfaction: ${meal['satisfaction']}/5', style: TextStyle(color: textColor)),
                 if (meal['mood'] != null)
