@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../models/meal_reminder.dart';
 import 'profile_page.dart';
+import '../screens/meal_reminders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +25,23 @@ class _HomeScreenState extends State<HomeScreen> {
     'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
+
+  // New fields for reminders
+  final NotificationService _notificationService = NotificationService();
+  final List<MealReminder> _mealReminders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+    // Other initialization...
+  }
+
+  Future<void> _initializeNotifications() async {
+    await _notificationService.init();
+    await _notificationService.requestPermissions();
+    // TODO: Load saved reminders from storage
+  }
 
   void _toggleTheme() {
     setState(() {
@@ -388,7 +408,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () {
+              _navigateToRemindersManagementScreen();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -680,38 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                PopupMenuButton(
-                  icon: Icon(Icons.more_vert, color: subtitleColor),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 20, color: primaryColor),
-                          const SizedBox(width: 8),
-                          const Text('Edit'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.delete, size: 20, color: Colors.red),
-                          const SizedBox(width: 8),
-                          const Text('Delete'),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      _editMeal(index);
-                    } else if (value == 'delete') {
-                      _deleteMeal(index);
-                    }
-                  },
-                ),
+                _buildPopupMenu(index),
               ],
             ),
             onTap: () => _showMealDetails(meal, index),
@@ -739,93 +730,638 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showMealDetails(Map<String, dynamic> meal, int index) {
-    final textColor = _isDarkMode ? Colors.white : Colors.black;
-    final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
-    final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100;
-    final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
+  // Add the new popup menu builder
+  PopupMenuButton<String> _buildPopupMenu(int index) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'reminder',
+          child: Row(
+            children: [
+              Icon(Icons.alarm, size: 20, color: Colors.purple),
+              const SizedBox(width: 8),
+              const Text('Set Reminder'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit, size: 20, color: Colors.teal),
+              const SizedBox(width: 8),
+              const Text('Edit'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              const Icon(Icons.delete, size: 20, color: Colors.red),
+              const SizedBox(width: 8),
+              const Text('Delete'),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'reminder') {
+          _showReminderDialog(index);
+        } else if (value == 'edit') {
+          _editMeal(index);
+        } else if (value == 'delete') {
+          _deleteMeal(index);
+        }
+      },
+    );
+  }
+
+  // Show reminder dialog
+  void _showReminderDialog(int index) {
+    final meal = _mealJournal[index];
+    final mealTitle = meal['title'];
+
+    // Extract time if available or use current time
+    TimeOfDay initialTime;
+    try {
+      final timeStr = meal['time'];
+      final format = RegExp(r'(\d+):(\d+) ([AP]M)');
+      final match = format.firstMatch(timeStr);
+      if (match != null) {
+        int hour = int.parse(match.group(1) ?? '12');
+        final int minute = int.parse(match.group(2) ?? '0');
+        final String period = match.group(3) ?? 'AM';
+
+        if (period == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (period == 'AM' && hour == 12) {
+          hour = 0;
+        }
+
+        initialTime = TimeOfDay(hour: hour, minute: minute);
+      } else {
+        initialTime = TimeOfDay.now();
+      }
+    } catch (e) {
+      initialTime = TimeOfDay.now();
+    }
+
+    TimeOfDay selectedTime = initialTime;
+    DateTime selectedDate = DateTime.now();
+    bool isRepeating = false;
+    List<bool> selectedWeekdays = List.filled(7, false);
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: cardColor,
-          title: Text(meal['title'], style: TextStyle(color: textColor)),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Text('Time: ${meal['time']}', style: TextStyle(color: textColor)),
-                Text('Description: ${meal['meal']}', style: TextStyle(color: textColor)),
-                Text('Calories: ${meal['calories']}', style: TextStyle(color: textColor)),
-                if (meal['satisfaction'] != null)
-                  Text('Satisfaction: ${meal['satisfaction']}/5', style: TextStyle(color: textColor)),
-                if (meal['mood'] != null)
-                  Text('Mood: ${meal['mood']}', style: TextStyle(color: textColor)),
-                if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text('Notes:', style: TextStyle(color: textColor)),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: backgroundColor,
-                      borderRadius: BorderRadius.circular(8),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Set Reminder for $mealTitle'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      title: const Text('Date'),
+                      subtitle: Text(
+                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (pickedDate != null) {
+                          setState(() {
+                            selectedDate = pickedDate;
+                          });
+                        }
+                      },
                     ),
-                    child: Text(meal['notes'], style: TextStyle(color: textColor)),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: TextStyle(color: primaryColor)),
-            ),
-            if (!meal['logged'])
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _logMeal(index);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
+                    ListTile(
+                      title: const Text('Time'),
+                      subtitle: Text(selectedTime.format(context)),
+                      trailing: const Icon(Icons.access_time),
+                      onTap: () async {
+                        final TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime,
+                        );
+                        if (pickedTime != null) {
+                          setState(() {
+                            selectedTime = pickedTime;
+                          });
+                        }
+                      },
+                    ),
+                    SwitchListTile(
+                      title: const Text('Repeat?'),
+                      value: isRepeating,
+                      onChanged: (value) {
+                        setState(() {
+                          isRepeating = value;
+                        });
+                      },
+                    ),
+                    if (isRepeating) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
+                        child: Text('Repeat on:'),
+                      ),
+                      Wrap(
+                        spacing: 8.0,
+                        children: [
+                          _buildWeekdayChip(setState, selectedWeekdays, 0, 'M'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 1, 'T'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 2, 'W'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 3, 'T'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 4, 'F'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 5, 'S'),
+                          _buildWeekdayChip(setState, selectedWeekdays, 6, 'S'),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                child: const Text('Log Meal'),
               ),
-            IconButton(
-              icon: const Icon(Icons.edit),
-              color: primaryColor,
-              onPressed: () {
-                Navigator.pop(context);
-                _editMeal(index);
-              },
-              tooltip: 'Edit Meal',
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _saveReminder(
+                      meal: meal,
+                      time: selectedTime,
+                      date: selectedDate,
+                      isRepeating: isRepeating,
+                      weekdays: selectedWeekdays,
+                    );
+                    Navigator.pop(context);
+                    _showReminderConfirmation();
+                  },
+                  child: const Text('Set Reminder'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildInsightCard(IconData icon, String label, String value, Color color) {
+  // Build weekday selection chip
+  Widget _buildWeekdayChip(
+      StateSetter setState,
+      List<bool> selectedWeekdays,
+      int index,
+      String label,
+      ) {
+    return FilterChip(
+      label: Text(label),
+      selected: selectedWeekdays[index],
+      onSelected: (bool selected) {
+        setState(() {
+          selectedWeekdays[index] = selected;
+        });
+      },
+      selectedColor: Colors.teal.shade100,
+      checkmarkColor: Colors.teal,
+    );
+  }
+
+  // Save the reminder
+  void _saveReminder({
+    required Map<String, dynamic> meal,
+    required TimeOfDay time,
+    required DateTime date,
+    required bool isRepeating,
+    required List<bool> weekdays,
+  }) {
+    final int reminderId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+    // Create the reminder
+    final reminderDateTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
+    // Save to the list
+    final reminder = MealReminder(
+      id: reminderId,
+      mealTitle: meal['title'],
+      reminderTime: time,
+      scheduledDate: reminderDateTime,
+      isRepeating: isRepeating,
+      weekdays: weekdays,
+    );
+
+    setState(() {
+      _mealReminders.add(reminder);
+    });
+
+    // Schedule the notification
+    _scheduleReminder(reminder);
+
+    // TODO: Save to persistent storage in a real app
+    // _saveRemindersToStorage();
+  }
+
+  // Schedule a reminder notification
+  void _scheduleReminder(MealReminder reminder) async {
+    final now = DateTime.now();
+
+    if (reminder.isRepeating) {
+      // For repeating reminders, schedule for each selected weekday
+      for (int i = 0; i < 7; i++) {
+        if (reminder.weekdays[i]) {
+          // Calculate next occurrence of this weekday
+          final nextDate = _getNextDateForWeekday(i);
+          final scheduledTime = DateTime(
+            nextDate.year,
+            nextDate.month,
+            nextDate.day,
+            reminder.reminderTime.hour,
+            reminder.reminderTime.minute,
+          );
+
+          // Create a unique ID for each weekday reminder
+          final uniqueId = reminder.id + (i * 1000);
+
+          await _notificationService.scheduleMealReminder(
+            id: uniqueId,
+            title: 'Meal Reminder',
+            mealName: reminder.mealTitle,
+            scheduledTime: scheduledTime,
+            description: 'Time for your ${reminder.mealTitle}!',
+          );
+        }
+      }
+    } else {
+      // For one-time reminders
+      if (reminder.scheduledDate.isAfter(now)) {
+        await _notificationService.scheduleMealReminder(
+          id: reminder.id,
+          title: 'Meal Reminder',
+          mealName: reminder.mealTitle,
+          scheduledTime: reminder.scheduledDate,
+          description: 'Time for your ${reminder.mealTitle}!',
+        );
+      }
+    }
+  }
+
+  // Get the next date for a given weekday (0 = Monday, 6 = Sunday)
+  DateTime _getNextDateForWeekday(int weekday) {
+    DateTime date = DateTime.now();
+
+    // Convert to 1-7 format where 1 is Monday and 7 is Sunday
+    int currentWeekday = date.weekday;
+
+    // Convert input weekday from 0-6 to 1-7
+    int targetWeekday = weekday + 1;
+
+    // Calculate days to add
+    int daysToAdd = targetWeekday - currentWeekday;
+    if (daysToAdd <= 0) {
+      daysToAdd += 7;
+    }
+
+    return date.add(Duration(days: daysToAdd));
+  }
+
+  // Show confirmation after setting a reminder
+  void _showReminderConfirmation() {
+    final snackBar = SnackBar(
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Reminder set successfully!'),
+          TextButton(
+            onPressed: () {
+              _navigateToRemindersManagementScreen();
+            },
+            child: const Text(
+              'VIEW ALL',
+              style: TextStyle(
+                color: Colors.amber,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(
+        label: 'DISMISS',
+        onPressed: () {},
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  // Navigate to reminders management screen
+  void _navigateToRemindersManagementScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MealRemindersScreen(
+          reminders: _mealReminders,
+          onDelete: _deleteReminder,
+        ),
+      ),
+    );
+  }
+
+  // Delete a reminder
+  void _deleteReminder(int id) {
+    setState(() {
+      _mealReminders.removeWhere((reminder) => reminder.id == id);
+    });
+
+    // Cancel the notification
+    _notificationService.cancelReminder(id);
+
+    // For repeating reminders, cancel all related weekday reminders
+    for (int i = 0; i < 7; i++) {
+      _notificationService.cancelReminder(id + (i * 1000));
+    }
+
+    // TODO: Save to persistent storage in a real app
+    // _saveRemindersToStorage();
+  }
+
+  // Show meal details
+  void _showMealDetails(Map<String, dynamic> meal, int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final isLogged = meal['logged'] == true;
+        final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
+        final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
+        final textColor = _isDarkMode ? Colors.white : Colors.black;
+        final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
+
+        // Satisfaction emoji and text
+        String satisfactionEmoji = '😐';
+        String satisfactionText = 'Neutral';
+
+        if (meal['satisfaction'] != null) {
+          if (meal['satisfaction'] >= 5) {
+            satisfactionEmoji = '😁';
+            satisfactionText = 'Excellent';
+          } else if (meal['satisfaction'] >= 4) {
+            satisfactionEmoji = '🙂';
+            satisfactionText = 'Good';
+          } else if (meal['satisfaction'] >= 3) {
+            satisfactionEmoji = '😐';
+            satisfactionText = 'Neutral';
+          } else if (meal['satisfaction'] >= 2) {
+            satisfactionEmoji = '😕';
+            satisfactionText = 'Not Great';
+          } else {
+            satisfactionEmoji = '😞';
+            satisfactionText = 'Poor';
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          color: backgroundColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    meal['title'],
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 16, color: subtitleColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    meal['time'],
+                    style: TextStyle(color: subtitleColor),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.local_fire_department, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${meal['calories']} calories',
+                    style: TextStyle(color: subtitleColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Description',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                meal['meal'],
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              if (isLogged) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Satisfaction',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              satisfactionEmoji,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$satisfactionText (${meal['satisfaction']}/5)',
+                              style: TextStyle(color: subtitleColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (meal['mood'] != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mood',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              meal['mood'],
+                              style: TextStyle(color: primaryColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
+                  Text(
+                    'Notes',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    meal['notes'],
+                    style: TextStyle(
+                      color: textColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ] else ...[
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _logMeal(index);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('Log This Meal'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showReminderDialog(index);
+                    },
+                    icon: const Icon(Icons.alarm),
+                    label: const Text('Set Reminder'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editMeal(index);
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInsightCard(IconData icon, String title, String status, Color iconColor) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 40),
+        Icon(icon, color: iconColor, size: 24),
         const SizedBox(height: 8),
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+        Text(
+          status,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
 }
 
-// Helper class to hold a mutable TimeOfDay
+// Helper class for TimeOfDay selection
 class _TimeHolder {
   TimeOfDay time;
-
   _TimeHolder(this.time);
 }
