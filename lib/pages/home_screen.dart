@@ -382,6 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final loggedCount = _getLoggedCount();
+    final totalMeals = _mealJournal.length;
+    final progress = totalMeals > 0 ? loggedCount / totalMeals : 0.0; // Calculate progress
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
     // Theme colors based on dark mode state
@@ -431,6 +433,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 25),
             _buildHeader(today, primaryColor, textColor, subtitleColor),
             const SizedBox(height: 10),
+            _buildProgressBar(progress), // Add the progress bar here
+            const SizedBox(height: 10),
             _mealJournal.isEmpty
                 ? _buildEmptyState(subtitleColor)
                 : ListView.builder(
@@ -478,7 +482,46 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
+    );
+  }
 
+  // Method to build the progress bar
+  Widget _buildProgressBar(double progress) {
+    final progressColor = progress < 0.3
+        ? Colors.red
+        : progress < 0.7
+        ? Colors.amber
+        : Colors.teal;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          const Text(
+            'Meal Logging Progress',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          // Enhanced progress bar with rounded corners
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade300,
+              color: progressColor,
+              minHeight: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${(progress * 100).toStringAsFixed(0)}% of meals logged',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: progressColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -513,7 +556,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
   Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor, Color textColor) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
