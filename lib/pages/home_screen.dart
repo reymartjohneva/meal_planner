@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../models/meal_reminder.dart';
 import 'profile_page.dart';
 import '../screens/meal_reminders_screen.dart';
+import '../screens/calendar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -456,7 +457,20 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: primaryColor,
         unselectedItemColor: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
         backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          if (index == 1) { // Check if the Calendar tab is tapped
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CalendarScreen(reminders: _mealReminders),
+              ),
+            );
+          } else {
+            setState(() {
+              _currentIndex = index; // Update the current index for other tabs
+            });
+          }
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),

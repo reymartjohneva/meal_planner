@@ -14,8 +14,8 @@ class MealReminder {
     required this.reminderTime,
     required this.scheduledDate,
     this.isRepeating = false,
-    this.weekdays = const [false, false, false, false, false, false, false],
-  });
+    List<bool>? weekdays, // Allow passing null to use default
+  }) : weekdays = weekdays ?? [false, false, false, false, false, false, false];
 
   Map<String, dynamic> toMap() {
     return {
@@ -41,5 +41,19 @@ class MealReminder {
       isRepeating: map['isRepeating'],
       weekdays: List<bool>.from(map['weekdays']),
     );
+  }
+
+  // Optional: Method to get the next reminder date based on the current date
+  DateTime getNextReminderDate() {
+    if (isRepeating) {
+      DateTime nextDate = scheduledDate;
+      while (true) {
+        nextDate = nextDate.add(Duration(days: 1));
+        if (weekdays[nextDate.weekday - 1]) { // Adjust for 0-indexed list
+          return nextDate;
+        }
+      }
+    }
+    return scheduledDate; // Return the scheduled date if not repeating
   }
 }
