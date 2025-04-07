@@ -458,12 +458,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Journal'),
-          BottomNavigationBarItem(icon: Icon(Icons.self_improvement_outlined), label: 'Wellness'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Community'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
+          BottomNavigationBarItem(icon: Icon(Icons.local_grocery_store_outlined), label: 'Grocery'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
+
     );
   }
 
