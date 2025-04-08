@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 import '../models/meal_reminder.dart';
 import 'profile_page.dart';
@@ -19,17 +20,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _isDarkMode = false; // Track dark mode state
 
-  // Empty meal journal list
-  final List<Map<String, dynamic>> _mealJournal = [];
+  final FirestoreService _firestoreService = FirestoreService(); // Add Firestore service
+
+  // New fields for reminders
+  final NotificationService _notificationService = NotificationService();
+  final List<MealReminder> _mealReminders = [];
 
   final List<String> _moodOptions = [
     'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
-
-  // New fields for reminders
-  final NotificationService _notificationService = NotificationService();
-  final List<MealReminder> _mealReminders = [];
 
   @override
   void initState() {
@@ -64,35 +64,71 @@ class _HomeScreenState extends State<HomeScreen> {
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
       timeHolder: _timeHolder,
-      onSave: () {
+      onSave: () async {
         if (_titleController.text.isNotEmpty &&
             _descriptionController.text.isNotEmpty &&
             _caloriesController.text.isNotEmpty) {
-          setState(() {
-            _mealJournal.add({
-              'title': _titleController.text,
-              'time': _timeHolder.time.format(context),
-              'meal': _descriptionController.text,
-              'calories': int.parse(_caloriesController.text),
-              'logged': false,
-            });
-          });
-          Navigator.pop(context);
+          try {
+            await _firestoreService.addMeal(
+              title: _titleController.text,
+              description: _descriptionController.text,
+              time: _timeHolder.time.format(context),
+              calories: int.parse(_caloriesController.text),
+            );
+            Navigator.pop(context);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error adding meal: $e')),
+            );
+          }
         }
       },
       isEditing: false,
     );
   }
 
-  void _editMeal(int index) {
-    final meal = _mealJournal[index];
+  void _editMeal(String mealId, Map<String, dynamic> meal) {
     final _titleController = TextEditingController(text: meal['title']);
-    final _descriptionController = TextEditingController(text: meal['meal']);
+    final _descriptionController = TextEditingController(text: meal['description']);
     final _caloriesController = TextEditingController(text: meal['calories'].toString());
+    final _timeHolder = _TimeHolder(_parseTime(meal['time']));
 
-    // Parse the time string back to TimeOfDay
-    final timeStr = meal['time'];
-    TimeOfDay _selectedTime;
+    _showMealForm(
+      context: context,
+      titleController: _titleController,
+      descriptionController: _descriptionController,
+      caloriesController: _caloriesController,
+      timeHolder: _timeHolder,
+      onSave: () async {
+        if (_titleController.text.isNotEmpty &&
+            _descriptionController.text.isNotEmpty &&
+            _caloriesController.text.isNotEmpty) {
+          try {
+            await _firestoreService.updateMeal(
+              mealId: mealId,
+              title: _titleController.text,
+              description: _descriptionController.text,
+              time: _timeHolder.time.format(context),
+              calories: int.parse(_caloriesController.text),
+              logged: meal['logged'],
+              satisfaction: meal['satisfaction'],
+              mood: meal['mood'],
+              notes: meal['notes'],
+            );
+            Navigator.pop(context);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating meal: $e')),
+            );
+          }
+        }
+      },
+      isEditing: true,
+    );
+  }
+
+  // Parse the time string back to TimeOfDay
+  TimeOfDay _parseTime(String timeStr) {
     try {
       final format = RegExp(r'(\d+):(\d+) ([AP]M)');
       final match = format.firstMatch(timeStr);
@@ -101,52 +137,18 @@ class _HomeScreenState extends State<HomeScreen> {
         final int minute = int.parse(match.group(2) ?? '0');
         final String period = match.group(3) ?? 'AM';
 
-        // Convert from 12-hour to 24-hour format for TimeOfDay
-        if (period == 'PM' && hour < 12) {
-          hour += 12;
-        } else if (period == 'AM' && hour == 12) {
-          hour = 0;
-        }
+        if (period == 'PM' && hour < 12) hour += 12;
+        else if (period == 'AM' && hour == 12) hour = 0;
 
-        _selectedTime = TimeOfDay(hour: hour, minute: minute);
-      } else {
-        _selectedTime = TimeOfDay.now();
+        return TimeOfDay(hour: hour, minute: minute);
       }
     } catch (e) {
-      _selectedTime = TimeOfDay.now();
+      return TimeOfDay.now();
     }
-
-    // Create a time holder with the parsed time
-    final _timeHolder = _TimeHolder(_selectedTime);
-
-    _showMealForm(
-      context: context,
-      titleController: _titleController,
-      descriptionController: _descriptionController,
-      caloriesController: _caloriesController,
-      timeHolder: _timeHolder,
-      onSave: () {
-        if (_titleController.text.isNotEmpty &&
-            _descriptionController.text.isNotEmpty &&
-            _caloriesController.text.isNotEmpty) {
-          setState(() {
-            _mealJournal[index] = {
-              'title': _titleController.text,
-              'time': _timeHolder.time.format(context),
-              'meal': _descriptionController.text,
-              'calories': int.parse(_caloriesController.text),
-              'logged': meal['logged'],
-              'satisfaction': meal['satisfaction'],
-              'mood': meal['mood'],
-              'notes': meal['notes'],
-            };
-          });
-          Navigator.pop(context);
-        }
-      },
-      isEditing: true,
-    );
+    return TimeOfDay.now();
   }
+
+
 
   void _showMealForm({
     required BuildContext context,
@@ -233,20 +235,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _logMeal(int index) {
-    if (_mealJournal[index]['satisfaction'] == null) {
-      _showSatisfactionDialog(index);
+  void _logMeal(String mealId, Map<String, dynamic> meal) {
+    if (meal['satisfaction'] == null) {
+      _showSatisfactionDialog(mealId, meal);
     } else {
-      setState(() {
-        _mealJournal[index]['logged'] = !_mealJournal[index]['logged'];
-      });
+      _firestoreService.updateMeal(
+        mealId: mealId,
+        title: meal['title'],
+        description: meal['description'],
+        time: meal['time'],
+        calories: meal['calories'],
+        logged: !meal['logged'],
+        satisfaction: meal['satisfaction'],
+        mood: meal['mood'],
+        notes: meal['notes'],
+      );
     }
   }
 
-  void _showSatisfactionDialog(int index) {
-    int? _satisfactionValue = _mealJournal[index]['satisfaction'];
-    String? _selectedMood = _mealJournal[index]['mood'];
-    final _notesController = TextEditingController(text: _mealJournal[index]['notes'] ?? '');
+  void _showSatisfactionDialog(String mealId, Map<String, dynamic> meal) {
+    int? _satisfactionValue = meal['satisfaction'];
+    String? _selectedMood = meal['mood'];
+    final _notesController = TextEditingController(text: meal['notes'] ?? '');
 
     showDialog(
       context: context,
@@ -328,12 +338,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
-                      this.setState(() {
-                        _mealJournal[index]['satisfaction'] = _satisfactionValue;
-                        _mealJournal[index]['mood'] = _selectedMood;
-                        _mealJournal[index]['notes'] = _notesController.text;
-                        _mealJournal[index]['logged'] = true;
-                      });
+                      _firestoreService.updateMeal(
+                        mealId: mealId,
+                        title: meal['title'],
+                        description: meal['description'],
+                        time: meal['time'],
+                        calories: meal['calories'],
+                        logged: true,
+                        satisfaction: _satisfactionValue,
+                        mood: _selectedMood,
+                        notes: _notesController.text,
+                      );
                       Navigator.pop(context);
                     }
                   },
@@ -347,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _deleteMeal(int index) {
+  void _deleteMeal(String mealId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -359,11 +374,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _mealJournal.removeAt(index);
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await _firestoreService.deleteMeal(mealId);
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting meal: $e')),
+                );
+              }
             },
             child: const Text('Delete'),
             style: ElevatedButton.styleFrom(
@@ -375,13 +394,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  int _getLoggedCount() {
-    return _mealJournal.where((m) => m['logged'] == true).length;
+  int _getLoggedCount(List<Map<String, dynamic>> meals) {
+    return meals.where((m) => m['logged'] == true).length;
   }
 
   @override
   Widget build(BuildContext context) {
-    final loggedCount = _getLoggedCount();
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
     // Theme colors based on dark mode state
@@ -424,27 +442,52 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildWellnessInsights(primaryColor, secondaryColor, textColor),
-            const SizedBox(height: 25),
-            _buildHeader(today, primaryColor, textColor, subtitleColor),
-            const SizedBox(height: 10),
-            _mealJournal.isEmpty
-                ? _buildEmptyState(subtitleColor)
-                : ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _mealJournal.length,
-              itemBuilder: (context, index) {
-                final meal = _mealJournal[index];
-                return _buildMealCard(index, meal, primaryColor, cardColor, textColor, subtitleColor);
-              },
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestoreService.getMeals(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final meals = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+
+          final loggedCount = _getLoggedCount(meals);
+          final totalMeals = meals.length;
+          final progress = totalMeals > 0 ? loggedCount / totalMeals : 0.0;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildWellnessInsights(primaryColor, secondaryColor, textColor),
+                const SizedBox(height: 25),
+                _buildHeader(today, primaryColor, textColor, subtitleColor),
+                const SizedBox(height: 10),
+                _buildProgressBar(progress),
+                const SizedBox(height: 10),
+                meals.isEmpty
+                    ? _buildEmptyState(subtitleColor)
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: meals.length,
+                  itemBuilder: (context, index) {
+                    final meal = meals[index];
+                    return _buildMealCard(index, meal, primaryColor, cardColor, textColor, subtitleColor);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addMeal,
@@ -478,7 +521,44 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
+    );
+  }
 
+  Widget _buildProgressBar(double progress) {
+    final progressColor = progress < 0.3
+        ? Colors.red
+        : progress < 0.7
+        ? Colors.amber
+        : Colors.teal;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          const Text(
+            'Meal Logging Progress',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade300,
+              color: progressColor,
+              minHeight: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${(progress * 100).toStringAsFixed(0)}% of meals logged',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: progressColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -490,8 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
               Icons.restaurant_outlined,
               size: 80,
-              color: _isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400
-          ),
+              color: _isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No meals added yet',
@@ -601,13 +680,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
                     color: textColor,
-                  )
-              ),
+                  )),
               const SizedBox(height: 4),
-              Text(
-                  today,
-                  style: TextStyle(color: subtitleColor)
-              ),
+              Text(today, style: TextStyle(color: subtitleColor)),
             ],
           ),
           OutlinedButton.icon(
@@ -626,6 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor, Color cardColor, Color textColor, Color subtitleColor) {
     final isLogged = meal['logged'] == true;
+    final mealId = meal['id'];
 
     // Icon and color for satisfaction rating
     IconData satisfactionIcon = Icons.sentiment_neutral;
@@ -680,7 +756,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${meal['time']} - ${meal['meal']}',
+                  '${meal['time']} - ${meal['description']}',
                   style: TextStyle(color: subtitleColor),
                 ),
                 Text(
@@ -707,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(satisfactionIcon, color: satisfactionColor, size: 24)
                 else
                   ElevatedButton(
-                    onPressed: () => _logMeal(index),
+                    onPressed: () => _logMeal(mealId, meal),
                     child: const Text('Log'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
@@ -717,10 +793,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                _buildPopupMenu(index),
+                _buildPopupMenu(mealId, meal),
               ],
             ),
-            onTap: () => _showMealDetails(meal, index),
+            onTap: () => _showMealDetails(meal, mealId),
           ),
           if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
             Padding(
@@ -746,7 +822,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Add the new popup menu builder
-  PopupMenuButton<String> _buildPopupMenu(int index) {
+  PopupMenuButton<String> _buildPopupMenu(String mealId, Map<String, dynamic> meal) {
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert, color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600),
       itemBuilder: (context) => [
@@ -783,46 +859,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
       onSelected: (value) {
         if (value == 'reminder') {
-          _showReminderDialog(index);
+          _showReminderDialog(mealId, meal);
         } else if (value == 'edit') {
-          _editMeal(index);
+          _editMeal(mealId, meal);
         } else if (value == 'delete') {
-          _deleteMeal(index);
+          _deleteMeal(mealId);
         }
       },
     );
   }
 
   // Show reminder dialog
-  void _showReminderDialog(int index) {
-    final meal = _mealJournal[index];
+  void _showReminderDialog(String mealId, Map<String, dynamic> meal) {
     final mealTitle = meal['title'];
 
-    // Extract time if available or use current time
-    TimeOfDay initialTime;
-    try {
-      final timeStr = meal['time'];
-      final format = RegExp(r'(\d+):(\d+) ([AP]M)');
-      final match = format.firstMatch(timeStr);
-      if (match != null) {
-        int hour = int.parse(match.group(1) ?? '12');
-        final int minute = int.parse(match.group(2) ?? '0');
-        final String period = match.group(3) ?? 'AM';
-
-        if (period == 'PM' && hour < 12) {
-          hour += 12;
-        } else if (period == 'AM' && hour == 12) {
-          hour = 0;
-        }
-
-        initialTime = TimeOfDay(hour: hour, minute: minute);
-      } else {
-        initialTime = TimeOfDay.now();
-      }
-    } catch (e) {
-      initialTime = TimeOfDay.now();
-    }
-
+    TimeOfDay initialTime = _parseTime(meal['time']);
     TimeOfDay selectedTime = initialTime;
     DateTime selectedDate = DateTime.now();
     bool isRepeating = false;
@@ -1121,7 +1172,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Show meal details
-  void _showMealDetails(Map<String, dynamic> meal, int index) {
+  void _showMealDetails(Map<String, dynamic> meal, String mealId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1211,7 +1262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                meal['meal'],
+                meal['description'],
                 style: TextStyle(
                   color: textColor,
                   fontSize: 16,
@@ -1303,7 +1354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _logMeal(index);
+                      _logMeal(mealId, meal);
                     },
                     icon: const Icon(Icons.check),
                     label: const Text('Log This Meal'),
@@ -1322,7 +1373,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _showReminderDialog(index);
+                      _showReminderDialog(mealId, meal);
                     },
                     icon: const Icon(Icons.alarm),
                     label: const Text('Set Reminder'),
@@ -1333,7 +1384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _editMeal(index);
+                      _editMeal(mealId, meal);
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit'),
