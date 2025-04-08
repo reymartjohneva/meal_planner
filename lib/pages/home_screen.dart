@@ -8,7 +8,8 @@ import '../models/meal_reminder.dart';
 import 'profile_page.dart';
 import '../screens/meal_reminders_screen.dart';
 import '../screens/calendar_screen.dart';
-
+import '../screens/grocery_page.dart';
+import '../screens/chatbot_page.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initializeNotifications();
     // Other initialization...
+
   }
 
   Future<void> _initializeNotifications() async {
@@ -500,12 +502,27 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: primaryColor,
         unselectedItemColor: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
         backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
+        type: BottomNavigationBarType.fixed, // Added to support 5 items
         onTap: (index) {
-          if (index == 1) { // Check if the Calendar tab is tapped
+          if (index == 1) { // Calendar tab
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => CalendarScreen(reminders: _mealReminders),
+              ),
+            );
+          } else if (index == 2) { // Grocery tab
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroceryPage(), // Navigate to Grocery Page
+              ),
+            );
+          } else if (index == 3) { // Chatbot tab
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatbotPage(), // Navigate to Chatbot Page
               ),
             );
           } else {
@@ -518,6 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
           BottomNavigationBarItem(icon: Icon(Icons.local_grocery_store_outlined), label: 'Grocery'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chatbot'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
