@@ -331,14 +331,14 @@ class _GroceryPageState extends State<GroceryPage> {
           ),
           SizedBox(height: 16),
           Text(
-            'Welcome to Meal Planner!',
+            'Welcome to PlannerHut!',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 8),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              'Search for recipes above or set your dietary preferences using the filter button.',
+              'Search for food or recipes above or set your dietary preferences using the filter button.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),
