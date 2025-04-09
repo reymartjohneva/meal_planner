@@ -218,7 +218,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
               children: [
                 _buildSuggestionChip("Show me a meal plan"),
                 _buildSuggestionChip("Find pasta recipes"),
-                _buildSuggestionChip("Vegan dinner ideas"),
+                _buildSuggestionChip("Dinner ideas"),
               ],
             ),
           ),
