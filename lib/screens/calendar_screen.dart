@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Add this import for FilteringTextInputFormatter
 import 'package:table_calendar/table_calendar.dart';
 import '../models/meal_reminder.dart';
 import 'dart:convert';
@@ -118,17 +119,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
               SnackBar(content: Text('${reminder.mealTitle} removed')),
             );
           },
-          child: ListTile(
-            title: Text(reminder.mealTitle),
-            subtitle: Text('Time: ${reminder.reminderTime.format(context)}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () => _showEditMealDialog(context, reminder),
-                ),
-              ],
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            child: ListTile(
+              title: Text(reminder.mealTitle),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Time: ${reminder.reminderTime.format(context)}'),
+                  if (reminder.description != null && reminder.description!.isNotEmpty)
+                    Text('Description: ${reminder.description}'),
+                  if (reminder.calories != null && reminder.calories! > 0)
+                    Text('Calories: ${reminder.calories}'),
+                ],
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _showEditMealDialog(context, reminder),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -226,6 +239,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mealTitle: mealData['mealTitle'] ?? 'Unnamed Meal',
           scheduledDate: scheduledDate,
           reminderTime: reminderTime,
+          description: mealData['description'],
+          calories: mealData['calories'],
         ));
       }
 
@@ -245,124 +260,179 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _showAddMealDialog(BuildContext context) {
     final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final caloriesController = TextEditingController();
     TimeOfDay selectedTime = TimeOfDay.now();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Meal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Meal Title'),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: const Text('Time'),
-              trailing: Text(selectedTime.format(context)),
-              onTap: () async {
-                final TimeOfDay? timeOfDay = await showTimePicker(
-                  context: context,
-                  initialTime: selectedTime,
-                );
-                if (timeOfDay != null) {
-                  selectedTime = timeOfDay;
-                  (context as Element).markNeedsBuild();
-                }
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          TextButton(
-            child: const Text('Add'),
-            onPressed: () {
-              if (titleController.text.isNotEmpty) {
-                final newMeal = MealReminder(
-                  id: DateTime.now().millisecondsSinceEpoch,
-                  mealTitle: titleController.text,
-                  scheduledDate: _selectedDay,
-                  reminderTime: selectedTime,
-                );
+      builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Meal'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: 'Meal Title'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: caloriesController,
+                      decoration: const InputDecoration(labelText: 'Calories'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      title: const Text('Time'),
+                      trailing: Text(selectedTime.format(context)),
+                      onTap: () async {
+                        final TimeOfDay? timeOfDay = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime,
+                        );
+                        if (timeOfDay != null) {
+                          setState(() {
+                            selectedTime = timeOfDay;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: const Text('Add'),
+                  onPressed: () {
+                    if (titleController.text.isNotEmpty) {
+                      final newMeal = MealReminder(
+                        id: DateTime.now().millisecondsSinceEpoch,
+                        mealTitle: titleController.text,
+                        description: descriptionController.text,
+                        calories: caloriesController.text.isNotEmpty ?
+                        int.parse(caloriesController.text) : 0,
+                        scheduledDate: _selectedDay,
+                        reminderTime: selectedTime,
+                      );
 
-                setState(() {
-                  _reminders.add(newMeal);
-                });
+                      setState(() {
+                        _reminders.add(newMeal);
+                      });
 
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-        ],
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          }
       ),
     );
   }
 
   void _showEditMealDialog(BuildContext context, MealReminder reminder) {
     final titleController = TextEditingController(text: reminder.mealTitle);
+    final descriptionController = TextEditingController(text: reminder.description ?? '');
+    final caloriesController = TextEditingController(
+        text: reminder.calories != null ? reminder.calories.toString() : '');
     TimeOfDay selectedTime = reminder.reminderTime;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Meal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Meal Title'),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: const Text('Time'),
-              trailing: Text(selectedTime.format(context)),
-              onTap: () async {
-                final TimeOfDay? timeOfDay = await showTimePicker(
-                  context: context,
-                  initialTime: selectedTime,
-                );
-                if (timeOfDay != null) {
-                  selectedTime = timeOfDay;
-                  (context as Element).markNeedsBuild();
-                }
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          TextButton(
-            child: const Text('Save'),
-            onPressed: () {
-              if (titleController.text.isNotEmpty) {
-                final index = _reminders.indexWhere((item) => item.id == reminder.id);
+      builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Meal'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: 'Meal Title'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: caloriesController,
+                      decoration: const InputDecoration(labelText: 'Calories'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      title: const Text('Time'),
+                      trailing: Text(selectedTime.format(context)),
+                      onTap: () async {
+                        final TimeOfDay? timeOfDay = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime,
+                        );
+                        if (timeOfDay != null) {
+                          setState(() {
+                            selectedTime = timeOfDay;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (titleController.text.isNotEmpty) {
+                      final index = _reminders.indexWhere((item) => item.id == reminder.id);
 
-                if (index != -1) {
-                  setState(() {
-                    _reminders[index] = MealReminder(
-                      id: reminder.id,
-                      mealTitle: titleController.text,
-                      scheduledDate: reminder.scheduledDate,
-                      reminderTime: selectedTime,
-                    );
-                  });
-                }
+                      if (index != -1) {
+                        setState(() {
+                          _reminders[index] = MealReminder(
+                            id: reminder.id,
+                            mealTitle: titleController.text,
+                            description: descriptionController.text,
+                            calories: caloriesController.text.isNotEmpty ?
+                            int.parse(caloriesController.text) : 0,
+                            scheduledDate: reminder.scheduledDate,
+                            reminderTime: selectedTime,
+                          );
+                        });
+                      }
 
-                Navigator.of(context).pop();
-              }
-            },
-          ),
-        ],
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          }
       ),
     );
   }

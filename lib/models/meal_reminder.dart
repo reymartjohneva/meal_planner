@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class MealReminder {
   final int id;
   final String mealTitle;
+  final String? description;
+  final int? calories;
   final TimeOfDay reminderTime;
   final DateTime scheduledDate;
   final bool isRepeating;
@@ -11,6 +13,8 @@ class MealReminder {
   MealReminder({
     required this.id,
     required this.mealTitle,
+    this.description,
+    this.calories,
     required this.reminderTime,
     required this.scheduledDate,
     this.isRepeating = false,
