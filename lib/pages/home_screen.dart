@@ -198,13 +198,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Method to select date and time together
             Future<void> _selectDateTime(BuildContext context) async {
+
+              final DateTime now = DateTime.now();
+              final DateTime initialDate = dateTimeHolder.dateTime.isBefore(now) ? now : dateTimeHolder.dateTime;
+
+
               // First select date
               final DateTime? pickedDate = await showDatePicker(
                 context: context,
-                initialDate: dateTimeHolder.dateTime,
-                firstDate: DateTime.now().subtract(const Duration(days: 30)), // Allow selecting past dates
+                initialDate: initialDate,
+                firstDate: now, // Set firstDate to today, preventing selection of past dates
                 lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
+              );
 
               if (pickedDate != null) {
                 // Then select time
@@ -214,16 +219,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
 
                 if (pickedTime != null) {
-                  setState(() {
                   // Combine date and time
-                    dateTimeHolder.dateTime = DateTime(
+                    final DateTime selectedDateTime = DateTime(
                     pickedDate.year,
                     pickedDate.month,
                     pickedDate.day,
                     pickedTime.hour,
                     pickedTime.minute,
                     );
-                  });
+
+                    if (selectedDateTime.isBefore(now)) {
+                      // Show error message if selected time is in the past
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cannot set meal time in the past. Using current time instead.'),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+
+                      // Use current time instead
+                      setState(() {
+                        dateTimeHolder.dateTime = now;
+                      });
+                    } else {
+                      setState(() {
+                        dateTimeHolder.dateTime = selectedDateTime;
+                      });
+                    }
                 }
               }
             }
