@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class MealReminder {
   final int id;
+  final String mealId; // Added this field
   final String mealTitle;
   final String? description;
   final int? calories;
@@ -12,6 +13,7 @@ class MealReminder {
 
   MealReminder({
     required this.id,
+    required this.mealId, // Added this parameter
     required this.mealTitle,
     this.description,
     this.calories,
@@ -24,6 +26,7 @@ class MealReminder {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'mealId': mealId, // Added to the map
       'mealTitle': mealTitle,
       'reminderHour': reminderTime.hour,
       'reminderMinute': reminderTime.minute,
@@ -36,6 +39,7 @@ class MealReminder {
   factory MealReminder.fromMap(Map<String, dynamic> map) {
     return MealReminder(
       id: map['id'],
+      mealId: map['mealId'], // Added to the factory constructor
       mealTitle: map['mealTitle'],
       reminderTime: TimeOfDay(
         hour: map['reminderHour'],

@@ -132,7 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _editMeal(String mealId, Map<String, dynamic> meal) {
     final _descriptionController = TextEditingController(text: meal['description']);
     final _caloriesController = TextEditingController(text: meal['calories'].toString());
-    final dateTime = (meal['dateTime'] as Timestamp).toDate();
+    final dateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
     final _dateTimeHolder = _DateTimeHolder(dateTime);
 
     _showMealForm(
@@ -321,7 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (meal['satisfaction'] == null) {
       _showSatisfactionDialog(mealId, meal);
     } else {
-      final dateTime = (meal['dateTime'] as Timestamp).toDate();
+      final dateTime = meal['dateTime'] != null
+          ? (meal['dateTime'] as Timestamp).toDate()
+          : DateTime.now();
       _firestoreService.updateMeal(
         mealId: mealId,
         mealType: meal['mealType'],
@@ -421,7 +425,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
-                      final dateTime = (meal['dateTime'] as Timestamp).toDate();
+                      final dateTime = meal['dateTime'] != null
+                          ? (meal['dateTime'] as Timestamp).toDate()
+                          : DateTime.now();
                       _firestoreService.updateMeal(
                         mealId: mealId,
                         mealType: meal['mealType'],
@@ -803,7 +809,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final isLogged = meal['logged'] == true;
     final mealId = meal['id'];
 
-    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
     final formatter = DateFormat('MMM d, yyyy');
     final timeFormatter = DateFormat('h:mm a');
     final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
@@ -964,8 +972,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Show reminder dialog
   void _showReminderDialog(String mealId, Map<String, dynamic> meal) {
-    final mealTitle = meal['title'];
-    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+    // Instead of using meal['title'] which doesn't exist, use meal['description'] or mealType
+    final mealTitle = meal['mealType']; // Changed from meal['title']
+    final mealDescription = meal['description'];
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
 
     TimeOfDay initialTime = TimeOfDay.fromDateTime(mealDateTime);
     TimeOfDay selectedTime = initialTime;
@@ -1062,6 +1074,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () {
                     _saveReminder(
                       meal: meal,
+                      mealId: mealId, // Pass mealId to associate the reminder with the meal
                       time: selectedTime,
                       date: selectedDate,
                       isRepeating: isRepeating,
@@ -1103,6 +1116,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Save the reminder
   void _saveReminder({
     required Map<String, dynamic> meal,
+    required String mealId, // Add mealId parameter
     required TimeOfDay time,
     required DateTime date,
     required bool isRepeating,
@@ -1122,7 +1136,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Save to the list
     final reminder = MealReminder(
       id: reminderId,
-      mealTitle: meal['title'],
+      mealId: mealId, // Store the mealId to associate with the specific meal
+      mealTitle: meal['mealType'], // Use mealType instead of title
+      description: meal['description'], // Add description for better notifications
       reminderTime: time,
       scheduledDate: reminderDateTime,
       isRepeating: isRepeating,
@@ -1280,7 +1296,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final textColor = _isDarkMode ? Colors.white : Colors.black;
         final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
 
-        final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+        final mealDateTime = meal['dateTime'] != null
+            ? (meal['dateTime'] as Timestamp).toDate()
+            : DateTime.now();
         final formatter = DateFormat('EEEE, MMMM d, yyyy');
         final timeFormatter = DateFormat('h:mm a');
         final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
