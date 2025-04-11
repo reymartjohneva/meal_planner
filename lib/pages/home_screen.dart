@@ -893,20 +893,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isLogged)
-                  Icon(satisfactionIcon, color: satisfactionColor, size: 24)
-                else
-                  ElevatedButton(
-                    onPressed: () => _logMeal(mealId, meal),
-                    child: const Text('Log'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                  ),
-                _buildPopupMenu(mealId, meal),
+                  Icon(satisfactionIcon, color: satisfactionColor, size: 50)
               ],
             ),
             onTap: () => _showMealDetails(meal, mealId),
@@ -935,40 +922,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Add the new popup menu builder
-  PopupMenuButton<String> _buildPopupMenu(String mealId, Map<String, dynamic> meal) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit, size: 20, color: Colors.teal),
-              const SizedBox(width: 8),
-              const Text('Edit'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              const Icon(Icons.delete, size: 20, color: Colors.red),
-              const SizedBox(width: 8),
-              const Text('Delete'),
-            ],
-          ),
-        ),
-      ],
-      onSelected: (value) {
-        if (value == 'edit') {
-          _editMeal(mealId, meal);
-        } else if (value == 'delete') {
-          _deleteMeal(mealId);
-        }
-      },
-    );
-  }
 
   // Show reminder dialog
   void _showReminderDialog(String mealId, Map<String, dynamic> meal) {
