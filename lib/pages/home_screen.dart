@@ -10,6 +10,13 @@ import '../screens/meal_reminders_screen.dart';
 import '../screens/calendar_screen.dart';
 import '../screens/grocery_page.dart';
 import '../screens/chatbot_page.dart';
+
+// Helper class to hold DateTime
+class _DateTimeHolder {
+  DateTime dateTime;
+  _DateTimeHolder(this.dateTime);
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -30,6 +37,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> _moodOptions = [
     'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
+  ];
+
+  final List<String> _mealTypeOptions = [
+    'Breakfast',
+    'Lunch',
+    'Snack',
+    'Dinner',
   ];
 
   @override
@@ -53,36 +67,62 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _addMeal() {
-    final _titleController = TextEditingController();
     final _descriptionController = TextEditingController();
     final _caloriesController = TextEditingController();
 
     // Use a wrapper for the TimeOfDay that can be updated
-    final _timeHolder = _TimeHolder(TimeOfDay.now());
+    final _dateTimeHolder = _DateTimeHolder(DateTime.now());
 
     _showMealForm(
       context: context,
-      titleController: _titleController,
+      selectedMealType: null,
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
-      timeHolder: _timeHolder,
-      onSave: () async {
-        if (_titleController.text.isNotEmpty &&
+      dateTimeHolder: _dateTimeHolder,
+      onSave: (String? updatedMealType) async {
+
+        print('Updated Meal Type: $updatedMealType');
+        print('Description: ${_descriptionController.text}');
+        print('Calories: ${_caloriesController.text}');
+
+        if (updatedMealType != null &&
             _descriptionController.text.isNotEmpty &&
             _caloriesController.text.isNotEmpty) {
           try {
             await _firestoreService.addMeal(
-              title: _titleController.text,
+              mealType: updatedMealType,
               description: _descriptionController.text,
-              time: _timeHolder.time.format(context),
+              dateTime: _dateTimeHolder.dateTime,
               calories: int.parse(_caloriesController.text),
             );
             Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Meal added successfully!'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error adding meal: $e')),
+              SnackBar(
+                content: Text('Error adding meal: $e'),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red, // Optional: Highlight error
+              ),
             );
           }
+        } else {
+          // Show validation error if fields are missing
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in all fields'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.orange, // Optional: Warning color
+            ),
+          );
         }
       },
       isEditing: false,
@@ -90,27 +130,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _editMeal(String mealId, Map<String, dynamic> meal) {
-    final _titleController = TextEditingController(text: meal['title']);
     final _descriptionController = TextEditingController(text: meal['description']);
     final _caloriesController = TextEditingController(text: meal['calories'].toString());
-    final _timeHolder = _TimeHolder(_parseTime(meal['time']));
+    final dateTime = (meal['dateTime'] as Timestamp).toDate();
+    final _dateTimeHolder = _DateTimeHolder(dateTime);
 
     _showMealForm(
       context: context,
-      titleController: _titleController,
+        selectedMealType: meal['mealType'],
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
-      timeHolder: _timeHolder,
-      onSave: () async {
-        if (_titleController.text.isNotEmpty &&
+      dateTimeHolder: _dateTimeHolder,
+      onSave: (String? updatedMealType) async {
+        if (updatedMealType != null &&
             _descriptionController.text.isNotEmpty &&
             _caloriesController.text.isNotEmpty) {
           try {
             await _firestoreService.updateMeal(
               mealId: mealId,
-              title: _titleController.text,
+              mealType: updatedMealType,
               description: _descriptionController.text,
-              time: _timeHolder.time.format(context),
+              dateTime: _dateTimeHolder.dateTime,
               calories: int.parse(_caloriesController.text),
               logged: meal['logged'],
               satisfaction: meal['satisfaction'],
@@ -129,53 +169,60 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Parse the time string back to TimeOfDay
-  TimeOfDay _parseTime(String timeStr) {
-    try {
-      final format = RegExp(r'(\d+):(\d+) ([AP]M)');
-      final match = format.firstMatch(timeStr);
-      if (match != null) {
-        int hour = int.parse(match.group(1) ?? '12');
-        final int minute = int.parse(match.group(2) ?? '0');
-        final String period = match.group(3) ?? 'AM';
-
-        if (period == 'PM' && hour < 12) hour += 12;
-        else if (period == 'AM' && hour == 12) hour = 0;
-
-        return TimeOfDay(hour: hour, minute: minute);
-      }
-    } catch (e) {
-      return TimeOfDay.now();
-    }
-    return TimeOfDay.now();
-  }
-
-
-
   void _showMealForm({
     required BuildContext context,
-    required TextEditingController titleController,
+    required String? selectedMealType,
     required TextEditingController descriptionController,
     required TextEditingController caloriesController,
-    required _TimeHolder timeHolder,
-    required VoidCallback onSave,
+    required _DateTimeHolder dateTimeHolder,
+    required Future<void> Function(String?) onSave,
     required bool isEditing,
   }) {
+    String? _localSelectedMealType = selectedMealType;
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            Future<void> _selectTime(BuildContext context) async {
-              final TimeOfDay? picked = await showTimePicker(
-                context: context,
-                initialTime: timeHolder.time,
-              );
 
-              if (picked != null) {
-                setState(() {
-                  timeHolder.time = picked;
-                });
+            String _formatDateTimeDisplay() {
+              final dt = dateTimeHolder.dateTime;
+              final date = "${dt.day}/${dt.month}/${dt.year}";
+              final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+              final minute = dt.minute.toString().padLeft(2, '0');
+              final period = dt.hour >= 12 ? 'PM' : 'AM';
+              return "$date at $hour:$minute $period";
+            }
+
+            // Method to select date and time together
+            Future<void> _selectDateTime(BuildContext context) async {
+              // First select date
+              final DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: dateTimeHolder.dateTime,
+                firstDate: DateTime.now().subtract(const Duration(days: 30)), // Allow selecting past dates
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+
+              if (pickedDate != null) {
+                // Then select time
+                final TimeOfDay? pickedTime = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.fromDateTime(dateTimeHolder.dateTime),
+                );
+
+                if (pickedTime != null) {
+                  setState(() {
+                  // Combine date and time
+                    dateTimeHolder.dateTime = DateTime(
+                    pickedDate.year,
+                    pickedDate.month,
+                    pickedDate.day,
+                    pickedTime.hour,
+                    pickedTime.minute,
+                    );
+                  });
+                }
               }
             }
 
@@ -185,9 +232,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: 'Meal Title'),
+                    DropdownButtonFormField<String>(
+                      value: selectedMealType,
+                      hint: const Text('Select Meal Type'),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _localSelectedMealType = newValue;
+                          print('Dropdown changed to: $_localSelectedMealType');
+                        });
+                      },
+                      items: _mealTypeOptions
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(labelText: 'Meal Type'),
                     ),
                     TextField(
                       controller: descriptionController,
@@ -203,19 +264,35 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        const Text('Time: '),
-                        TextButton(
-                          onPressed: () => _selectTime(context),
-                          child: Text(
-                            timeHolder.time.format(context),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+
+                    InkWell(
+                      onTap: () => _selectDateTime(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ],
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Date & Time',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatDateTimeDisplay(),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            const Icon(Icons.calendar_today),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -226,7 +303,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: onSave,
+                  onPressed: () async {
+                    print('Before saving, selected meal type: $_localSelectedMealType'); // Debug
+                    await onSave(_localSelectedMealType);
+                  },
                   child: Text(isEditing ? 'Update' : 'Add Meal'),
                 ),
               ],
@@ -241,11 +321,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (meal['satisfaction'] == null) {
       _showSatisfactionDialog(mealId, meal);
     } else {
+      final dateTime = (meal['dateTime'] as Timestamp).toDate();
       _firestoreService.updateMeal(
         mealId: mealId,
-        title: meal['title'],
+        mealType: meal['mealType'],
         description: meal['description'],
-        time: meal['time'],
+        dateTime: dateTime,
         calories: meal['calories'],
         logged: !meal['logged'],
         satisfaction: meal['satisfaction'],
@@ -340,11 +421,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
+                      final dateTime = (meal['dateTime'] as Timestamp).toDate();
                       _firestoreService.updateMeal(
                         mealId: mealId,
-                        title: meal['title'],
+                        mealType: meal['mealType'],
                         description: meal['description'],
-                        time: meal['time'],
+                        dateTime: dateTime,
                         calories: meal['calories'],
                         logged: true,
                         satisfaction: _satisfactionValue,
@@ -721,6 +803,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final isLogged = meal['logged'] == true;
     final mealId = meal['id'];
 
+    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+    final formatter = DateFormat('MMM d, yyyy');
+    final timeFormatter = DateFormat('h:mm a');
+    final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
+
     // Icon and color for satisfaction rating
     IconData satisfactionIcon = Icons.sentiment_neutral;
     Color satisfactionColor = Colors.grey;
@@ -764,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             title: Text(
-                meal['title'],
+                meal['mealType'],
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: textColor,
@@ -774,7 +861,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${meal['time']} - ${meal['description']}',
+                  '$dateTimeStr',
                   style: TextStyle(color: subtitleColor),
                 ),
                 Text(
@@ -845,16 +932,6 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icon(Icons.more_vert, color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600),
       itemBuilder: (context) => [
         PopupMenuItem(
-          value: 'reminder',
-          child: Row(
-            children: [
-              Icon(Icons.alarm, size: 20, color: Colors.purple),
-              const SizedBox(width: 8),
-              const Text('Set Reminder'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
           value: 'edit',
           child: Row(
             children: [
@@ -876,9 +953,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
       onSelected: (value) {
-        if (value == 'reminder') {
-          _showReminderDialog(mealId, meal);
-        } else if (value == 'edit') {
+        if (value == 'edit') {
           _editMeal(mealId, meal);
         } else if (value == 'delete') {
           _deleteMeal(mealId);
@@ -890,8 +965,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Show reminder dialog
   void _showReminderDialog(String mealId, Map<String, dynamic> meal) {
     final mealTitle = meal['title'];
+    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
 
-    TimeOfDay initialTime = _parseTime(meal['time']);
+    TimeOfDay initialTime = TimeOfDay.fromDateTime(mealDateTime);
     TimeOfDay selectedTime = initialTime;
     DateTime selectedDate = DateTime.now();
     bool isRepeating = false;
@@ -1204,6 +1280,11 @@ class _HomeScreenState extends State<HomeScreen> {
         final textColor = _isDarkMode ? Colors.white : Colors.black;
         final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
 
+        final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+        final formatter = DateFormat('EEEE, MMMM d, yyyy');
+        final timeFormatter = DateFormat('h:mm a');
+        final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
+
         // Satisfaction emoji and text
         String satisfactionEmoji = '😐';
         String satisfactionText = 'Neutral';
@@ -1238,7 +1319,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    meal['title'],
+                    meal['mealType'],
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -1254,11 +1335,13 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 16, color: subtitleColor),
+                  Icon(Icons.calendar_today, size: 16, color: subtitleColor),
                   const SizedBox(width: 6),
-                  Text(
-                    meal['time'],
-                    style: TextStyle(color: subtitleColor),
+                  Expanded(
+                    child: Text(
+                      dateTimeStr,
+                      style: TextStyle(color: subtitleColor),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Icon(Icons.local_fire_department, size: 16, color: Colors.orange),

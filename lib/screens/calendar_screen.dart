@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Add this import for FilteringTextInputFormatter
 import 'package:table_calendar/table_calendar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firestore_service.dart';
 import '../models/meal_reminder.dart';
 import 'dart:convert';
 
@@ -17,6 +19,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _selectedDay;
   late DateTime _focusedDay;
   late List<MealReminder> _reminders;
+  final FirestoreService _firestoreService = FirestoreService();
+  final List<String> _mealTypeOptions = [
+    'Breakfast',
+    'Lunch',
+    'Snack',
+    'Dinner',
+  ];
 
   @override
   void initState() {
@@ -35,10 +44,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           PopupMenuButton<String>(
             onSelected: _handleMenuSelection,
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'import',
-                child: Text('Import Meal Plan'),
-              ),
               const PopupMenuItem<String>(
                 value: 'add_meal',
                 child: Text('Add Meal'),
@@ -62,9 +67,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             },
             calendarFormat: CalendarFormat.month,
             eventLoader: _getEventsForDay,
-            onFormatChanged: (format) {
-              // Handle format change if needed
-            },
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
             },
@@ -82,184 +84,98 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  List<MealReminder> _getEventsForDay(DateTime day) {
-    return _reminders.where((reminder) {
-      final reminderDate = reminder.scheduledDate;
-      return reminderDate.year == day.year &&
-          reminderDate.month == day.month &&
-          reminderDate.day == day.day;
-    }).toList();
+  List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
+    return []; // Will be populated via StreamBuilder in _buildMealListForSelectedDay
   }
 
   Widget _buildMealListForSelectedDay() {
-    final mealsForSelectedDay = _getEventsForDay(_selectedDay);
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestoreService.getMeals(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (mealsForSelectedDay.isEmpty) {
-      return const Center(child: Text('No meals planned for this day.'));
-    }
+        final meals = snapshot.data!.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).where((meal) {
+          final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+          return mealDateTime.year == _selectedDay.year &&
+              mealDateTime.month == _selectedDay.month &&
+              mealDateTime.day == _selectedDay.day;
+        }).toList();
 
-    return ListView.builder(
-      itemCount: mealsForSelectedDay.length,
-      itemBuilder: (context, index) {
-        final reminder = mealsForSelectedDay[index];
-        return Dismissible(
-          key: Key(reminder.id.toString()),
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 20.0),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            setState(() {
-              _reminders.remove(reminder);
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${reminder.mealTitle} removed')),
+        if (meals.isEmpty) {
+          return const Center(child: Text('No meals planned for this day.'));
+        }
+
+        return ListView.builder(
+          itemCount: meals.length,
+          itemBuilder: (context, index) {
+            final meal = meals[index];
+            final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+            final timeFormatter = TimeOfDay.fromDateTime(mealDateTime).format(context);
+
+            return Dismissible(
+              key: Key(meal['id']),
+              background: Container(
+                color: Colors.red,
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20.0),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+              direction: DismissDirection.endToStart,
+              onDismissed: (direction) async {
+                try {
+                  await _firestoreService.deleteMeal(meal['id']);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${meal['mealType']} removed')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error deleting meal: $e')),
+                  );
+                }
+              },
+              child: Card(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                child: ListTile(
+                  title: Text(meal['mealType']),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Time: $timeFormatter'),
+                      if (meal['description'] != null && meal['description'].isNotEmpty)
+                        Text('Description: ${meal['description']}'),
+                      Text('Calories: ${meal['calories']}'),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _editMeal(meal['id'], meal),
+                  ),
+                ),
+              ),
             );
           },
-          child: Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: ListTile(
-              title: Text(reminder.mealTitle),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Time: ${reminder.reminderTime.format(context)}'),
-                  if (reminder.description != null && reminder.description!.isNotEmpty)
-                    Text('Description: ${reminder.description}'),
-                  if (reminder.calories != null && reminder.calories! > 0)
-                    Text('Calories: ${reminder.calories}'),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _showEditMealDialog(context, reminder),
-                  ),
-                ],
-              ),
-            ),
-          ),
         );
       },
     );
   }
 
   void _handleMenuSelection(String value) async {
-    switch (value) {
-      case 'import':
-        _showImportDialog();
-        break;
-      case 'add_meal':
-        _showAddMealDialog(context);
-        break;
-    }
-  }
-
-  void _showImportDialog() {
-    final textController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import Meal Plan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Paste your meal plan JSON data below:'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: textController,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: '[{"mealTitle": "Breakfast", "scheduledDate": "2025-04-08", "reminderTime": "08:00"}]',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              _importMealPlanFromJson(textController.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Import'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _importMealPlanFromJson(String jsonString) {
-    try {
-      if (jsonString.isEmpty) return;
-
-      final List<dynamic> jsonData = jsonDecode(jsonString);
-      List<MealReminder> importedMeals = [];
-
-      for (var mealData in jsonData) {
-        // Parse the date
-        DateTime scheduledDate;
-        if (mealData['scheduledDate'] is String) {
-          scheduledDate = DateTime.parse(mealData['scheduledDate']);
-        } else {
-          // Skip invalid entries
-          continue;
-        }
-
-        // Parse the time
-        TimeOfDay reminderTime;
-        if (mealData['reminderTime'] is String) {
-          final timeParts = mealData['reminderTime'].split(':');
-          if (timeParts.length == 2) {
-            reminderTime = TimeOfDay(
-              hour: int.parse(timeParts[0]),
-              minute: int.parse(timeParts[1]),
-            );
-          } else {
-            // Skip invalid entries
-            continue;
-          }
-        } else {
-          // Skip invalid entries
-          continue;
-        }
-
-        importedMeals.add(MealReminder(
-          id: mealData['id'] ?? DateTime.now().millisecondsSinceEpoch,
-          mealTitle: mealData['mealTitle'] ?? 'Unnamed Meal',
-          scheduledDate: scheduledDate,
-          reminderTime: reminderTime,
-          description: mealData['description'],
-          calories: mealData['calories'],
-        ));
-      }
-
-      setState(() {
-        _reminders.addAll(importedMeals);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Imported ${importedMeals.length} meals')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error importing meal plan: $e')),
-      );
+    if (value == 'add_meal') {
+      _showAddMealDialog(context);
     }
   }
 
   void _showAddMealDialog(BuildContext context) {
-    final titleController = TextEditingController();
+    String? selectedMealType;
     final descriptionController = TextEditingController();
     final caloriesController = TextEditingController();
     TimeOfDay selectedTime = TimeOfDay.now();
@@ -267,172 +183,229 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Add Meal'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: 'Meal Title'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(labelText: 'Description'),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: caloriesController,
-                      decoration: const InputDecoration(labelText: 'Calories'),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      title: const Text('Time'),
-                      trailing: Text(selectedTime.format(context)),
-                      onTap: () async {
-                        final TimeOfDay? timeOfDay = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (timeOfDay != null) {
-                          setState(() {
-                            selectedTime = timeOfDay;
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Add Meal for ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: selectedMealType,
+                    hint: const Text('Select Meal Type'),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedMealType = newValue;
+                      });
+                    },
+                    items: _mealTypeOptions
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    decoration: const InputDecoration(labelText: 'Meal Type'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: caloriesController,
+                    decoration: const InputDecoration(labelText: 'Calories'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Time'),
+                    trailing: Text(selectedTime.format(context)),
+                    onTap: () async {
+                      final TimeOfDay? timeOfDay = await showTimePicker(
+                        context: context,
+                        initialTime: selectedTime,
+                      );
+                      if (timeOfDay != null) {
+                        setState(() {
+                          selectedTime = timeOfDay;
+                        });
+                      }
+                    },
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                TextButton(
-                  child: const Text('Add'),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      final newMeal = MealReminder(
-                        id: DateTime.now().millisecondsSinceEpoch,
-                        mealTitle: titleController.text,
-                        description: descriptionController.text,
-                        calories: caloriesController.text.isNotEmpty ?
-                        int.parse(caloriesController.text) : 0,
-                        scheduledDate: _selectedDay,
-                        reminderTime: selectedTime,
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              TextButton(
+                child: const Text('Add'),
+                onPressed: () async {
+                  if (selectedMealType != null &&
+                      descriptionController.text.trim().isNotEmpty &&
+                      caloriesController.text.trim().isNotEmpty) {
+                    final scheduledDateTime = DateTime(
+                      _selectedDay.year,
+                      _selectedDay.month,
+                      _selectedDay.day,
+                      selectedTime.hour,
+                      selectedTime.minute,
+                    );
+
+                    try {
+                      await _firestoreService.addMeal(
+                        mealType: selectedMealType!,
+                        description: descriptionController.text.trim(),
+                        calories: int.parse(caloriesController.text.trim()),
+                        dateTime: scheduledDateTime,
                       );
 
-                      setState(() {
-                        _reminders.add(newMeal);
-                      });
-
                       Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Meal added and reminder set!')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error adding meal: $e')),
+                      );
                     }
-                  },
-                ),
-              ],
-            );
-          }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please fill in all fields')),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  void _showEditMealDialog(BuildContext context, MealReminder reminder) {
-    final titleController = TextEditingController(text: reminder.mealTitle);
-    final descriptionController = TextEditingController(text: reminder.description ?? '');
-    final caloriesController = TextEditingController(
-        text: reminder.calories != null ? reminder.calories.toString() : '');
-    TimeOfDay selectedTime = reminder.reminderTime;
+  void _editMeal(String mealId, Map<String, dynamic> meal) {
+    String? selectedMealType = meal['mealType'];
+    final descriptionController = TextEditingController(text: meal['description']);
+    final caloriesController = TextEditingController(text: meal['calories'].toString());
+    final dateTime = (meal['dateTime'] as Timestamp).toDate();
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(dateTime);
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Edit Meal'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: 'Meal Title'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(labelText: 'Description'),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: caloriesController,
-                      decoration: const InputDecoration(labelText: 'Calories'),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      title: const Text('Time'),
-                      trailing: Text(selectedTime.format(context)),
-                      onTap: () async {
-                        final TimeOfDay? timeOfDay = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (timeOfDay != null) {
-                          setState(() {
-                            selectedTime = timeOfDay;
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                TextButton(
-                  child: const Text('Save'),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      final index = _reminders.indexWhere((item) => item.id == reminder.id);
-
-                      if (index != -1) {
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Edit Meal for ${dateTime.day}/${dateTime.month}/${dateTime.year}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: selectedMealType,
+                    hint: const Text('Select Meal Type'),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedMealType = newValue;
+                      });
+                    },
+                    items: _mealTypeOptions
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    decoration: const InputDecoration(labelText: 'Meal Type'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: caloriesController,
+                    decoration: const InputDecoration(labelText: 'Calories'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Time'),
+                    trailing: Text(selectedTime.format(context)),
+                    onTap: () async {
+                      final TimeOfDay? timeOfDay = await showTimePicker(
+                        context: context,
+                        initialTime: selectedTime,
+                      );
+                      if (timeOfDay != null) {
                         setState(() {
-                          _reminders[index] = MealReminder(
-                            id: reminder.id,
-                            mealTitle: titleController.text,
-                            description: descriptionController.text,
-                            calories: caloriesController.text.isNotEmpty ?
-                            int.parse(caloriesController.text) : 0,
-                            scheduledDate: reminder.scheduledDate,
-                            reminderTime: selectedTime,
-                          );
+                          selectedTime = timeOfDay;
                         });
                       }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              TextButton(
+                child: const Text('Save'),
+                onPressed: () async {
+                  if (selectedMealType != null &&
+                      descriptionController.text.trim().isNotEmpty &&
+                      caloriesController.text.trim().isNotEmpty) {
+                    final updatedDateTime = DateTime(
+                      dateTime.year,
+                      dateTime.month,
+                      dateTime.day,
+                      selectedTime.hour,
+                      selectedTime.minute,
+                    );
+
+                    try {
+                      await _firestoreService.updateMeal(
+                        mealId: mealId,
+                        mealType: selectedMealType!,
+                        description: descriptionController.text.trim(),
+                        calories: int.parse(caloriesController.text.trim()),
+                        dateTime: updatedDateTime,
+                        logged: meal['logged'],
+                        satisfaction: meal['satisfaction'],
+                        mood: meal['mood'],
+                        notes: meal['notes'],
+                      );
 
                       Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Meal updated and reminder set!')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error updating meal: $e')),
+                      );
                     }
-                  },
-                ),
-              ],
-            );
-          }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please fill in all fields')),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

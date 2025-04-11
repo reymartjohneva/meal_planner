@@ -19,18 +19,18 @@ class FirestoreService {
 
   // CREATE
   Future<void> addMeal({
-    required String title,
+    required String mealType,
     required String description,
-    required String time,
     required int calories,
+    required DateTime dateTime,
   }) async {
     if (userId == null) throw Exception('User not authenticated');
 
     await meals.add({
-      'title': title,
+      'mealType': mealType,
       'description': description,
-      'time': time,
       'calories': calories,
+      'dateTime': Timestamp.fromDate(dateTime),
       'userId': userId,
       'logged': false,
       'created_at': FieldValue.serverTimestamp(),
@@ -40,10 +40,10 @@ class FirestoreService {
   // UPDATE
   Future<void> updateMeal({
     required String mealId,
-    required String title,
+    required String mealType,
     required String description,
-    required String time,
     required int calories,
+    required DateTime dateTime,
     required bool logged,
     int? satisfaction,
     String? mood,
@@ -52,10 +52,10 @@ class FirestoreService {
     if (userId == null) throw Exception('User not authenticated');
 
     Map<String, dynamic> data = {
-      'title': title,
+      'mealType': mealType,
       'description': description,
-      'time': time,
       'calories': calories,
+      'dateTime': Timestamp.fromDate(dateTime),
       'logged': logged,
       'userId': userId,
     };
