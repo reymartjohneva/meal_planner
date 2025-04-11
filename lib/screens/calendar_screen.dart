@@ -79,9 +79,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: () => _showAddMealDialog(context),
+        onPressed: () => _handleAddMealRequest(context),
       ),
     );
+  }
+
+  void _handleAddMealRequest(BuildContext context) {
+    // Create DateTime objects with time set to midnight for proper comparison
+    final today = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    final selectedDateStart = DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+    );
+
+    if (selectedDateStart.isBefore(today)) {
+      // Show error message if selected date is in the past
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot add meals to past dates'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      // Proceed with showing the add meal dialog
+      _showAddMealDialog(context);
+    }
   }
 
   List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
@@ -157,7 +185,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.edit),
-                    onPressed: () => _editMeal(meal['id'], meal),
+                    onPressed: () => _handleEditMealRequest(meal['id'], meal),
                   ),
                 ),
               ),
@@ -166,6 +194,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
       },
     );
+  }
+
+  void _handleEditMealRequest(String mealId, Map<String, dynamic> meal) {
+    final today = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    final mealDate = (meal['dateTime'] as Timestamp).toDate();
+    final mealDateStart = DateTime(
+      mealDate.year,
+      mealDate.month,
+      mealDate.day,
+    );
+
+    // Allow editing today's meals and future meals
+    if (!mealDateStart.isBefore(today)) {
+      _editMeal(mealId, meal);
+    } else {
+      // For past meals, show a different message
+      // You may choose to still allow editing past meals or show this error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot edit meals from past dates'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleMenuSelection(String value) async {

@@ -132,7 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _editMeal(String mealId, Map<String, dynamic> meal) {
     final _descriptionController = TextEditingController(text: meal['description']);
     final _caloriesController = TextEditingController(text: meal['calories'].toString());
-    final dateTime = (meal['dateTime'] as Timestamp).toDate();
+    final dateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
     final _dateTimeHolder = _DateTimeHolder(dateTime);
 
     _showMealForm(
@@ -196,13 +198,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Method to select date and time together
             Future<void> _selectDateTime(BuildContext context) async {
+
+              final DateTime now = DateTime.now();
+              final DateTime initialDate = dateTimeHolder.dateTime.isBefore(now) ? now : dateTimeHolder.dateTime;
+
+
               // First select date
               final DateTime? pickedDate = await showDatePicker(
                 context: context,
-                initialDate: dateTimeHolder.dateTime,
-                firstDate: DateTime.now().subtract(const Duration(days: 30)), // Allow selecting past dates
+                initialDate: initialDate,
+                firstDate: now, // Set firstDate to today, preventing selection of past dates
                 lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
+              );
 
               if (pickedDate != null) {
                 // Then select time
@@ -212,16 +219,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
 
                 if (pickedTime != null) {
-                  setState(() {
                   // Combine date and time
-                    dateTimeHolder.dateTime = DateTime(
+                    final DateTime selectedDateTime = DateTime(
                     pickedDate.year,
                     pickedDate.month,
                     pickedDate.day,
                     pickedTime.hour,
                     pickedTime.minute,
                     );
-                  });
+
+                    if (selectedDateTime.isBefore(now)) {
+                      // Show error message if selected time is in the past
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cannot set meal time in the past. Using current time instead.'),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+
+                      // Use current time instead
+                      setState(() {
+                        dateTimeHolder.dateTime = now;
+                      });
+                    } else {
+                      setState(() {
+                        dateTimeHolder.dateTime = selectedDateTime;
+                      });
+                    }
                 }
               }
             }
@@ -321,7 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (meal['satisfaction'] == null) {
       _showSatisfactionDialog(mealId, meal);
     } else {
-      final dateTime = (meal['dateTime'] as Timestamp).toDate();
+      final dateTime = meal['dateTime'] != null
+          ? (meal['dateTime'] as Timestamp).toDate()
+          : DateTime.now();
       _firestoreService.updateMeal(
         mealId: mealId,
         mealType: meal['mealType'],
@@ -421,7 +448,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
-                      final dateTime = (meal['dateTime'] as Timestamp).toDate();
+                      final dateTime = meal['dateTime'] != null
+                          ? (meal['dateTime'] as Timestamp).toDate()
+                          : DateTime.now();
                       _firestoreService.updateMeal(
                         mealId: mealId,
                         mealType: meal['mealType'],
@@ -803,7 +832,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final isLogged = meal['logged'] == true;
     final mealId = meal['id'];
 
-    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
     final formatter = DateFormat('MMM d, yyyy');
     final timeFormatter = DateFormat('h:mm a');
     final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
@@ -885,20 +916,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isLogged)
-                  Icon(satisfactionIcon, color: satisfactionColor, size: 24)
-                else
-                  ElevatedButton(
-                    onPressed: () => _logMeal(mealId, meal),
-                    child: const Text('Log'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                  ),
-                _buildPopupMenu(mealId, meal),
+                  Icon(satisfactionIcon, color: satisfactionColor, size: 50)
               ],
             ),
             onTap: () => _showMealDetails(meal, mealId),
@@ -927,154 +945,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Add the new popup menu builder
-  PopupMenuButton<String> _buildPopupMenu(String mealId, Map<String, dynamic> meal) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit, size: 20, color: Colors.teal),
-              const SizedBox(width: 8),
-              const Text('Edit'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              const Icon(Icons.delete, size: 20, color: Colors.red),
-              const SizedBox(width: 8),
-              const Text('Delete'),
-            ],
-          ),
-        ),
-      ],
-      onSelected: (value) {
-        if (value == 'edit') {
-          _editMeal(mealId, meal);
-        } else if (value == 'delete') {
-          _deleteMeal(mealId);
-        }
-      },
-    );
-  }
 
   // Show reminder dialog
-  void _showReminderDialog(String mealId, Map<String, dynamic> meal) {
-    final mealTitle = meal['title'];
-    final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+  void _showReminderConfirmationDialog(String mealId, Map<String, dynamic> meal) {
+    final mealTitle = meal['mealType'];
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
 
-    TimeOfDay initialTime = TimeOfDay.fromDateTime(mealDateTime);
-    TimeOfDay selectedTime = initialTime;
-    DateTime selectedDate = DateTime.now();
-    bool isRepeating = false;
-    List<bool> selectedWeekdays = List.filled(7, false);
+    // Format date and time for display
+    final formatter = DateFormat('EEEE, MMMM d');
+    final timeFormatter = DateFormat('h:mm a');
+    final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
 
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Set Reminder for $mealTitle'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListTile(
-                      title: const Text('Date'),
-                      subtitle: Text(
-                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'
-                      ),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (pickedDate != null) {
-                          setState(() {
-                            selectedDate = pickedDate;
-                          });
-                        }
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('Time'),
-                      subtitle: Text(selectedTime.format(context)),
-                      trailing: const Icon(Icons.access_time),
-                      onTap: () async {
-                        final TimeOfDay? pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: selectedTime,
-                        );
-                        if (pickedTime != null) {
-                          setState(() {
-                            selectedTime = pickedTime;
-                          });
-                        }
-                      },
-                    ),
-                    SwitchListTile(
-                      title: const Text('Repeat?'),
-                      value: isRepeating,
-                      onChanged: (value) {
-                        setState(() {
-                          isRepeating = value;
-                        });
-                      },
-                    ),
-                    if (isRepeating) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                        child: Text('Repeat on:'),
-                      ),
-                      Wrap(
-                        spacing: 8.0,
-                        children: [
-                          _buildWeekdayChip(setState, selectedWeekdays, 0, 'M'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 1, 'T'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 2, 'W'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 3, 'T'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 4, 'F'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 5, 'S'),
-                          _buildWeekdayChip(setState, selectedWeekdays, 6, 'S'),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+        return AlertDialog(
+          title: Text('Set Reminder for $mealTitle'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Do you want to set a reminder for:'),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.restaurant),
+                title: Text(mealTitle),
+                subtitle: Text(dateTimeStr),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _saveReminder(
-                      meal: meal,
-                      time: selectedTime,
-                      date: selectedDate,
-                      isRepeating: isRepeating,
-                      weekdays: selectedWeekdays,
-                    );
-                    Navigator.pop(context);
-                    _showReminderConfirmation();
-                  },
-                  child: const Text('Set Reminder'),
-                ),
-              ],
-            );
-          },
+              const SizedBox(height: 8),
+              Text('Reminder will be set for the time you entered when adding this meal.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _saveReminder(
+                  meal: meal,
+                  mealId: mealId,
+                );
+                Navigator.pop(context);
+                _showReminderSetConfirmation();
+              },
+              child: const Text('Set Reminder'),
+            ),
+          ],
         );
       },
     );
@@ -1100,33 +1022,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showReminderSetConfirmation() {
+    final snackBar = SnackBar(
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Reminder set successfully!'),
+          TextButton(
+            onPressed: () {
+              _navigateToRemindersManagementScreen();
+            },
+            child: const Text(
+              'VIEW ALL',
+              style: TextStyle(
+                color: Colors.amber,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(
+        label: 'DISMISS',
+        onPressed: () {},
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   // Save the reminder
   void _saveReminder({
     required Map<String, dynamic> meal,
-    required TimeOfDay time,
-    required DateTime date,
-    required bool isRepeating,
-    required List<bool> weekdays,
+    required String mealId,
   }) {
     final int reminderId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-    // Create the reminder
-    final reminderDateTime = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
+
+    final reminderTime = TimeOfDay(
+      hour: mealDateTime.hour,
+      minute: mealDateTime.minute,
     );
 
-    // Save to the list
+    // Create the reminder object
     final reminder = MealReminder(
       id: reminderId,
-      mealTitle: meal['title'],
-      reminderTime: time,
-      scheduledDate: reminderDateTime,
-      isRepeating: isRepeating,
-      weekdays: weekdays,
+      mealId: mealId,
+      mealTitle: meal['mealType'],
+      description: meal['description'],
+      reminderTime: reminderTime,
+      scheduledDate: mealDateTime,
+      isRepeating: false, // Set to false by default
+      weekdays: List.filled(7, false), // Not using weekdays for meal-specific reminders
     );
 
     setState(() {
@@ -1135,10 +1086,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Schedule the notification
     _scheduleReminder(reminder);
-
-    // TODO: Save to persistent storage in a real app
-    // _saveRemindersToStorage();
   }
+
 
   // Schedule a reminder notification
   void _scheduleReminder(MealReminder reminder) async {
@@ -1280,7 +1229,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final textColor = _isDarkMode ? Colors.white : Colors.black;
         final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
 
-        final mealDateTime = (meal['dateTime'] as Timestamp).toDate();
+        final mealDateTime = meal['dateTime'] != null
+            ? (meal['dateTime'] as Timestamp).toDate()
+            : DateTime.now();
         final formatter = DateFormat('EEEE, MMMM d, yyyy');
         final timeFormatter = DateFormat('h:mm a');
         final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
@@ -1474,7 +1425,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _showReminderDialog(mealId, meal);
+                      _showReminderConfirmationDialog(mealId, meal);
                     },
                     icon: const Icon(Icons.alarm),
                     label: const Text('Set Reminder'),
