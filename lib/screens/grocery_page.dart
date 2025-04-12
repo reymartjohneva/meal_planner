@@ -54,12 +54,140 @@ class UserPreferences {
   }
 }
 
+// Recipe model to handle saving and loading favorites
+class Recipe {
+  final int id;
+  final String title;
+  final String image;
+  final bool vegetarian;
+  final bool vegan;
+  final bool glutenFree;
+  final bool dairyFree;
+  final int calories;
+
+  Recipe({
+    required this.id,
+    required this.title,
+    required this.image,
+    required this.vegetarian,
+    required this.vegan,
+    required this.glutenFree,
+    required this.dairyFree,
+    required this.calories,
+  });
+
+  // Create from API JSON response
+  factory Recipe.fromJson(Map<String, dynamic> json) {
+    // Extract calories if available
+    final nutrients = json['nutrition']?['nutrients'];
+    int calories = 0;
+    if (nutrients != null) {
+      final calorieInfo = nutrients.firstWhere(
+            (n) => n['name'] == 'Calories',
+        orElse: () => {'amount': 0},
+      );
+      calories = calorieInfo['amount'].toInt();
+    }
+
+    return Recipe(
+      id: json['id'],
+      title: json['title'],
+      image: json['image'],
+      vegetarian: json['vegetarian'] ?? false,
+      vegan: json['vegan'] ?? false,
+      glutenFree: json['glutenFree'] ?? false,
+      dairyFree: json['dairyFree'] ?? false,
+      calories: calories,
+    );
+  }
+
+  // Convert to JSON for storage
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'image': image,
+      'vegetarian': vegetarian,
+      'vegan': vegan,
+      'glutenFree': glutenFree,
+      'dairyFree': dairyFree,
+      'calories': calories,
+    };
+  }
+}
+
+// Favorites manager class
+class FavoritesManager {
+  static const String _prefsKey = 'favorites';
+
+  // Get all favorite recipes
+  static Future<List<Recipe>> getFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? favoritesJson = prefs.getString(_prefsKey);
+
+    if (favoritesJson == null) {
+      return [];
+    }
+
+    final List<dynamic> favoritesData = json.decode(favoritesJson);
+    return favoritesData.map((item) => Recipe.fromJson(item)).toList();
+  }
+
+  // Check if a recipe is favorited
+  static Future<bool> isFavorite(int recipeId) async {
+    final favorites = await getFavorites();
+    return favorites.any((recipe) => recipe.id == recipeId);
+  }
+
+  // Add a recipe to favorites
+  static Future<void> addFavorite(Recipe recipe) async {
+    final favorites = await getFavorites();
+
+    // Check if already exists
+    if (favorites.any((item) => item.id == recipe.id)) {
+      return;
+    }
+
+    favorites.add(recipe);
+    await _saveFavorites(favorites);
+  }
+
+  // Remove a recipe from favorites
+  static Future<void> removeFavorite(int recipeId) async {
+    final favorites = await getFavorites();
+    favorites.removeWhere((recipe) => recipe.id == recipeId);
+    await _saveFavorites(favorites);
+  }
+
+  // Toggle favorite status
+  static Future<bool> toggleFavorite(Recipe recipe) async {
+    final isFav = await isFavorite(recipe.id);
+
+    if (isFav) {
+      await removeFavorite(recipe.id);
+      return false;
+    } else {
+      await addFavorite(recipe);
+      return true;
+    }
+  }
+
+  // Save favorites to SharedPreferences
+  static Future<void> _saveFavorites(List<Recipe> favorites) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String favoritesJson = json.encode(
+        favorites.map((recipe) => recipe.toJson()).toList()
+    );
+    await prefs.setString(_prefsKey, favoritesJson);
+  }
+}
+
 class GroceryPage extends StatefulWidget {
   @override
   _GroceryPageState createState() => _GroceryPageState();
 }
 
-class _GroceryPageState extends State<GroceryPage> {
+class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStateMixin {
   final String apiKey = '6cc047ebf7264623b2c64b0ac21c2499';
   List<dynamic> recipes = [];
   String query = '';
@@ -67,29 +195,58 @@ class _GroceryPageState extends State<GroceryPage> {
   final int limit = 10;
   bool isLoading = false;
   bool hasMore = true;
-  bool isFirstVisit = true; // Add this flag
+  bool isFirstVisit = true;
   ScrollController _scrollController = ScrollController();
   TextEditingController _searchController = TextEditingController();
   UserPreferences userPrefs = UserPreferences();
 
+  // Tab controller for search and favorites tabs
+  late TabController _tabController;
+  List<Recipe> favoriteRecipes = [];
+  bool isFavoritesLoading = false;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserPreferences();
+    _loadFavorites();
+
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
           !isLoading &&
-          hasMore) {
+          hasMore &&
+          _tabController.index == 0) { // Only load more for search tab
         fetchRecipes();
       }
     });
+
+    _tabController.addListener(() {
+      if (_tabController.index == 1) {
+        // Refresh favorites when tab is selected
+        _loadFavorites();
+      }
+    });
+  }
+
+  Future<void> _loadFavorites() async {
+    setState(() => isFavoritesLoading = true);
+
+    try {
+      final favorites = await FavoritesManager.getFavorites();
+      setState(() {
+        favoriteRecipes = favorites;
+        isFavoritesLoading = false;
+      });
+    } catch (e) {
+      print('Error loading favorites: $e');
+      setState(() => isFavoritesLoading = false);
+    }
   }
 
   Future<void> _loadUserPreferences() async {
     userPrefs = await UserPreferences.loadFromPrefs();
     setState(() {});
-    // Don't automatically fetch recipes on first load
-    // fetchRecipes() - Remove this line
   }
 
   Future<void> fetchRecipes({bool reset = false}) async {
@@ -154,6 +311,35 @@ class _GroceryPageState extends State<GroceryPage> {
     }
   }
 
+  Future<void> _toggleFavorite(Map<String, dynamic> recipeData) async {
+    final recipe = Recipe.fromJson(recipeData);
+    final isFavorite = await FavoritesManager.toggleFavorite(recipe);
+
+    // Show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          isFavorite
+              ? '${recipe.title} added to favorites'
+              : '${recipe.title} removed from favorites'
+      ),
+      duration: Duration(seconds: 2),
+      action: SnackBarAction(
+        label: 'View',
+        onPressed: () {
+          _tabController.animateTo(1); // Switch to favorites tab
+        },
+      ),
+    ));
+
+    // Refresh favorites if we're on that tab
+    if (_tabController.index == 1) {
+      _loadFavorites();
+    }
+
+    // Force rebuild of the current recipe card to update the icon
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,152 +352,141 @@ class _GroceryPageState extends State<GroceryPage> {
             tooltip: 'Preferences',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(icon: Icon(Icons.search), text: 'Search'),
+            Tab(icon: Icon(Icons.bookmark), text: 'Favorites'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
+          // Search Tab
+          _buildSearchTab(),
+
+          // Favorites Tab
+          _buildFavoritesTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.all(10),
+          child: TextField(
+            controller: _searchController,
+            onSubmitted: _onSearch,
+            decoration: InputDecoration(
+              hintText: 'Search for recipes...',
+              suffixIcon: IconButton(
+                icon: Icon(Icons.search),
+                onPressed: () => _onSearch(_searchController.text),
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        // Active filters display
+        if (userPrefs.vegetarian || userPrefs.vegan || userPrefs.glutenFree || userPrefs.dairyFree)
           Padding(
-            padding: EdgeInsets.all(10),
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: _onSearch,
-              decoration: InputDecoration(
-                hintText: 'Search for recipes...',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () => _onSearch(_searchController.text),
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  if (userPrefs.vegetarian)
+                    Chip(label: Text('Vegetarian')),
+                  if (userPrefs.vegan)
+                    Chip(label: Text('Vegan')),
+                  if (userPrefs.glutenFree)
+                    Chip(label: Text('Gluten-Free')),
+                  if (userPrefs.dairyFree)
+                    Chip(label: Text('Dairy-Free')),
+                  Chip(label: Text('Max ${userPrefs.maxCalories} cal')),
+                ],
               ),
             ),
           ),
-          // Active filters display
-          if (userPrefs.vegetarian || userPrefs.vegan || userPrefs.glutenFree || userPrefs.dairyFree)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Wrap(
-                  spacing: 8,
-                  children: [
-                    if (userPrefs.vegetarian)
-                      Chip(label: Text('Vegetarian')),
-                    if (userPrefs.vegan)
-                      Chip(label: Text('Vegan')),
-                    if (userPrefs.glutenFree)
-                      Chip(label: Text('Gluten-Free')),
-                    if (userPrefs.dairyFree)
-                      Chip(label: Text('Dairy-Free')),
-                    Chip(label: Text('Max ${userPrefs.maxCalories} cal')),
-                  ],
-                ),
-              ),
+        Expanded(
+          child: !isFirstVisit && recipes.isEmpty && !isLoading
+              ? Center(child: Text('No recipes found.'))
+              : isFirstVisit && recipes.isEmpty && !isLoading
+              ? _buildWelcomeScreen()
+              : _buildRecipeGrid(recipes, isFromSearch: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFavoritesTab() {
+    if (isFavoritesLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (favoriteRecipes.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bookmark_border,
+              size: 80,
+              color: Colors.grey,
             ),
+            SizedBox(height: 16),
+            Text(
+              'No favorites yet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Mark recipes as favorites to see them here',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: Icon(Icons.search),
+              label: Text('Find Recipes'),
+              onPressed: () {
+                _tabController.animateTo(0);
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Text(
+              'Your Favorite Recipes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
           Expanded(
-            child: !isFirstVisit && recipes.isEmpty && !isLoading
-                ? Center(child: Text('No recipes found.'))
-                : isFirstVisit && recipes.isEmpty && !isLoading
-                ? _buildWelcomeScreen() // Add a welcome screen for first visit
-                : GridView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.all(10),
+            child: GridView.builder(
+              padding: EdgeInsets.only(bottom: 10),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childAspectRatio: 0.8,
               ),
-              itemCount: recipes.length + (hasMore ? 1 : 0),
+              itemCount: favoriteRecipes.length,
               itemBuilder: (context, index) {
-                if (index < recipes.length) {
-                  final recipe = recipes[index];
-                  // Extract calories if available
-                  final nutrients = recipe['nutrition']?['nutrients'];
-                  String calories = "N/A";
-                  if (nutrients != null) {
-                    final calorieInfo = nutrients.firstWhere(
-                          (n) => n['name'] == 'Calories',
-                      orElse: () => {'amount': 0},
-                    );
-                    calories = "${calorieInfo['amount'].toInt()} cal";
-                  }
-
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RecipeDetailPage(recipeId: recipe['id']),
-                        ),
-                      );
-                    },
-                    child: Card(
-                      elevation: 4,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Image.network(
-                                  recipe['image'],
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                ),
-                                Positioned(
-                                  top: 5,
-                                  right: 5,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.7),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      calories,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              recipe['title'],
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          // Diet indicators
-                          Padding(
-                            padding: EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                            child: Wrap(
-                              spacing: 4,
-                              children: [
-                                if (recipe['vegetarian'] == true)
-                                  _buildDietBadge('V', Colors.green),
-                                if (recipe['vegan'] == true)
-                                  _buildDietBadge('Ve', Colors.green[700]!),
-                                if (recipe['glutenFree'] == true)
-                                  _buildDietBadge('GF', Colors.orange),
-                                if (recipe['dairyFree'] == true)
-                                  _buildDietBadge('DF', Colors.blue),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                } else {
-                  return Center(child: CircularProgressIndicator());
-                }
+                final recipe = favoriteRecipes[index];
+                return _buildFavoriteRecipeCard(recipe);
               },
             ),
           ),
@@ -319,6 +494,221 @@ class _GroceryPageState extends State<GroceryPage> {
       ),
     );
   }
+
+  Widget _buildRecipeGrid(List<dynamic> recipeList, {bool isFromSearch = false}) {
+    return GridView.builder(
+      controller: isFromSearch ? _scrollController : null,
+      padding: EdgeInsets.all(10),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: recipeList.length + (isFromSearch && hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < recipeList.length) {
+          final recipe = recipeList[index];
+          // Extract calories if available
+          final nutrients = recipe['nutrition']?['nutrients'];
+          String calories = "N/A";
+          if (nutrients != null) {
+            final calorieInfo = nutrients.firstWhere(
+                  (n) => n['name'] == 'Calories',
+              orElse: () => {'amount': 0},
+            );
+            calories = "${calorieInfo['amount'].toInt()} cal";
+          }
+
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RecipeDetailPage(
+                    recipeId: recipe['id'],
+                    onFavoriteToggled: () {
+                      // Refresh favorites when returning from detail page
+                      if (_tabController.index == 1) {
+                        _loadFavorites();
+                      } else {
+                        setState(() {}); // Refresh UI to update favorite icon
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
+            child: Card(
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          recipe['image'],
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
+
+                        Positioned(
+                          top: 5,
+                          left: 5,
+                          child: FutureBuilder<bool>(
+                            future: FavoritesManager.isFavorite(recipe['id']),
+                            builder: (context, snapshot) {
+                              final isFavorited = snapshot.data ?? false;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.8),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    isFavorited ? Icons.favorite : Icons.favorite_border,
+                                    color: isFavorited ? Colors.red : Colors.grey,
+                                  ),
+                                  onPressed: () => _toggleFavorite(recipe),
+                                  constraints: BoxConstraints.tightFor(width: 36, height: 36),
+                                  padding: EdgeInsets.all(4),
+                                  iconSize: 20,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text(
+                      recipe['title'],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  // Diet indicators
+                  Padding(
+                    padding: EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                    child: Wrap(
+                      spacing: 4,
+                      children: [
+                        if (recipe['vegetarian'] == true)
+                          _buildDietBadge('V', Colors.green),
+                        if (recipe['vegan'] == true)
+                          _buildDietBadge('Ve', Colors.green[700]!),
+                        if (recipe['glutenFree'] == true)
+                          _buildDietBadge('GF', Colors.orange),
+                        if (recipe['dairyFree'] == true)
+                          _buildDietBadge('DF', Colors.blue),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      },
+    );
+  }
+
+  Widget _buildFavoriteRecipeCard(Recipe recipe) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecipeDetailPage(
+              recipeId: recipe.id,
+              onFavoriteToggled: () => _loadFavorites(),
+            ),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 4,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    recipe.image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
+                  Positioned(
+                    top: 5,
+                    left: 5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.favorite,
+                          color: Colors.red,
+                        ),
+                        onPressed: () async {
+                          await FavoritesManager.removeFavorite(recipe.id);
+                          _loadFavorites();
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('${recipe.title} removed from favorites'),
+                            duration: Duration(seconds: 2),
+                          ));
+                        },
+                        constraints: BoxConstraints.tightFor(width: 36, height: 36),
+                        padding: EdgeInsets.all(4),
+                        iconSize: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                recipe.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            // Diet indicators
+            Padding(
+              padding: EdgeInsets.only(left: 8, right: 8, bottom: 8),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  if (recipe.vegetarian)
+                    _buildDietBadge('V', Colors.green),
+                  if (recipe.vegan)
+                    _buildDietBadge('Ve', Colors.green[700]!),
+                  if (recipe.glutenFree)
+                    _buildDietBadge('GF', Colors.orange),
+                  if (recipe.dairyFree)
+                    _buildDietBadge('DF', Colors.blue),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildWelcomeScreen() {
     return Center(
       child: Column(
@@ -385,6 +775,7 @@ class _GroceryPageState extends State<GroceryPage> {
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 }
@@ -479,11 +870,12 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
   }
 }
 
-// Detail Page (enhanced with nutrition information)
+// Detail Page (enhanced with nutrition information and favorite button)
 class RecipeDetailPage extends StatefulWidget {
   final int recipeId;
+  final VoidCallback? onFavoriteToggled;
 
-  RecipeDetailPage({required this.recipeId});
+  RecipeDetailPage({required this.recipeId, this.onFavoriteToggled});
 
   @override
   _RecipeDetailPageState createState() => _RecipeDetailPageState();
@@ -493,18 +885,27 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Map<String, dynamic>? recipeDetail;
   final String apiKey = '6cc047ebf7264623b2c64b0ac21c2499';
   bool isLoading = true;
+  bool isFavorite = false;
 
   @override
   void initState() {
     super.initState();
     fetchRecipeDetail();
+    checkFavoriteStatus();
   }
 
+  Future<void> checkFavoriteStatus() async {
+    final result = await FavoritesManager.isFavorite(widget.recipeId);
+    setState(() => isFavorite = result);
+  }
+
+  // Complete the fetchRecipeDetail() function in the RecipeDetailPage
   Future<void> fetchRecipeDetail() async {
     setState(() => isLoading = true);
 
     final url = Uri.parse(
-      'https://api.spoonacular.com/recipes/${widget.recipeId}/information?apiKey=$apiKey&includeNutrition=true',
+      'https://api.spoonacular.com/recipes/${widget
+          .recipeId}/information?apiKey=$apiKey&includeNutrition=true',
     );
 
     final response = await http.get(url);
@@ -522,10 +923,77 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     }
   }
 
+// Add toggleFavorite method to RecipeDetailPage
+  Future<void> _toggleFavorite() async {
+    if (recipeDetail == null) return;
+
+    // Create a Recipe object from the detail data
+    final recipe = Recipe(
+      id: recipeDetail!['id'],
+      title: recipeDetail!['title'],
+      image: recipeDetail!['image'],
+      vegetarian: recipeDetail!['vegetarian'] ?? false,
+      vegan: recipeDetail!['vegan'] ?? false,
+      glutenFree: recipeDetail!['glutenFree'] ?? false,
+      dairyFree: recipeDetail!['dairyFree'] ?? false,
+      calories: _getCaloriesFromNutrients(
+          recipeDetail!['nutrition']?['nutrients']),
+    );
+
+    // Toggle the favorite status
+    final newStatus = await FavoritesManager.toggleFavorite(recipe);
+
+    setState(() {
+      isFavorite = newStatus;
+    });
+
+    // Notify parent of the change
+    if (widget.onFavoriteToggled != null) {
+      widget.onFavoriteToggled!();
+    }
+
+    // Show feedback to the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite
+            ? '${recipe.title} added to favorites'
+            : '${recipe.title} removed from favorites'
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+// Helper method to extract calories from nutrients
+  int _getCaloriesFromNutrients(List? nutrients) {
+    if (nutrients == null) return 0;
+
+    final calorieInfo = nutrients.firstWhere(
+          (n) => n['name'] == 'Calories',
+      orElse: () => {'amount': 0},
+    );
+
+    return calorieInfo['amount'].toInt();
+  }
+
+// Complete the build method for RecipeDetailPage to add favorite button
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Recipe Details')),
+      appBar: AppBar(
+        title: Text('Recipe Details'),
+        actions: [
+          // Add favorite button to app bar
+          IconButton(
+            icon: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: isFavorite ? Colors.red : null,
+            ),
+            onPressed: _toggleFavorite,
+            tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+          ),
+        ],
+      ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : recipeDetail == null
@@ -566,8 +1034,10 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   _buildInfoBadge('Gluten-Free', Colors.orange),
                 if (recipeDetail!['dairyFree'] == true)
                   _buildInfoBadge('Dairy-Free', Colors.blue),
-                _buildInfoBadge('${recipeDetail!['readyInMinutes']} min', Colors.purple),
-                _buildInfoBadge('Serves ${recipeDetail!['servings']}', Colors.teal),
+                _buildInfoBadge(
+                    '${recipeDetail!['readyInMinutes']} min', Colors.purple),
+                _buildInfoBadge(
+                    'Serves ${recipeDetail!['servings']}', Colors.teal),
               ],
             ),
             SizedBox(height: 16),
@@ -585,21 +1055,23 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
             SizedBox(height: 8),
             ...List<Widget>.from(
               recipeDetail!['extendedIngredients'].map(
-                    (ing) => Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('• ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Expanded(
-                        child: Text(
-                          ing['original'],
-                          style: TextStyle(fontSize: 16),
-                        ),
+                    (ing) =>
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              ing['original'],
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
               ),
             ),
 
@@ -615,37 +1087,40 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 recipeDetail!['analyzedInstructions'][0]['steps'].isNotEmpty)
               ...List<Widget>.from(
                 recipeDetail!['analyzedInstructions'][0]['steps'].map(
-                      (step) => Padding(
-                    padding: EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            '${step['number']}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                      (step) =>
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Theme
+                                    .of(context)
+                                    .primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${step['number']}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                step['step'],
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            step['step'],
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
                 ),
               )
             else
@@ -659,6 +1134,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
+// Methods for building nutrition section (reuse from your existing code)
   Widget _buildInfoBadge(String text, Color color) {
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -686,7 +1162,16 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
     // Extract main nutrients
     Map<String, dynamic> mainNutrients = {};
-    List<String> keyNutrients = ['Calories', 'Fat', 'Carbohydrates', 'Protein', 'Sugar', 'Fiber', 'Cholesterol', 'Sodium'];
+    List<String> keyNutrients = [
+      'Calories',
+      'Fat',
+      'Carbohydrates',
+      'Protein',
+      'Sugar',
+      'Fiber',
+      'Cholesterol',
+      'Sodium'
+    ];
 
     for (var nutrient in nutrients) {
       if (keyNutrients.contains(nutrient['name'])) {
@@ -798,7 +1283,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _buildMainNutrientTile(String name, int amount, String unit, double percent, Color color) {
+  Widget _buildMainNutrientTile(String name, int amount, String unit,
+      double percent, Color color) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       child: Column(
@@ -832,7 +1318,8 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _buildNutrientTile(String name, String amount, String unit, double percent, Color color) {
+  Widget _buildNutrientTile(String name, String amount, String unit,
+      double percent, Color color) {
     return Card(
       elevation: 0,
       color: Colors.grey[100],

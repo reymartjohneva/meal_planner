@@ -5,6 +5,7 @@ import 'pages/register_page.dart';
 import 'pages/home_screen.dart';
 import 'pages/profile_page.dart';  // Import the Profile Page
 import 'firebase_options.dart';
+import 'pages/getting_started_page.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +70,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterPage(),
         '/login': (context) => const LoginPage(),
         '/profile': (context) => const ProfilePage(),
+        '/onboarding': (context) => const OnboardingScreen(),
       },
     );
   }
