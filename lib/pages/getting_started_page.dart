@@ -14,18 +14,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: "Plan Your Meals",
-      description: "Create weekly meal plans with our intuitive drag-and-drop interface. Organize breakfast, lunch, and dinner with ease.",
+      description:
+      "Create weekly meal plans with our intuitive drag-and-drop interface. Organize breakfast, lunch, and dinner with ease.",
       image: Icons.restaurant_menu,
+      backgroundImage: "assets/app_intro1.jpg",
     ),
     OnboardingPage(
       title: "Smart Shopping Lists",
-      description: "Generate shopping lists automatically based on your meal plan. Never forget an ingredient again!",
+      description:
+      "Generate shopping lists automatically based on your meal plan. Never forget an ingredient again!",
       image: Icons.shopping_cart,
+      backgroundImage: "assets/app_intro2.jpg",
     ),
     OnboardingPage(
       title: "Track Nutrition",
-      description: "Monitor your calorie intake and nutritional balance. Eat healthier with personalized insights.",
+      description:
+      "Monitor your calorie intake and nutritional balance. Eat healthier with personalized insights.",
       image: Icons.pie_chart,
+      backgroundImage: "assets/app_intro3.jpg",
     ),
   ];
 
@@ -73,12 +79,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _currentPage == _pages.length - 1
                       ? ElevatedButton(
                     onPressed: () {
-                      // Navigate to your home screen
                       Navigator.pushReplacementNamed(context, '/home');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5CB85C),
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -125,38 +131,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget buildPageContent(OnboardingPage page) {
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            page.image,
-            size: 150,
-            color: const Color(0xFF5CB85C),
-          ),
-          const SizedBox(height: 40),
-          Text(
-            page.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5CB85C),
+    return Stack(
+      children: [
+        // Background Image
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0.2,
+            child: Image.asset(
+              page.backgroundImage,
+              fit: BoxFit.cover,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
-          Text(
-            page.description,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
+        ),
+        // Foreground Content
+        Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                page.image,
+                size: 150,
+                color: const Color(0xFF5CB85C),
+              ),
+              const SizedBox(height: 40),
+              Text(
+                page.title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5CB85C),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  page.description,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -167,9 +196,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 10,
       width: _currentPage == index ? 25 : 10,
       decoration: BoxDecoration(
-        color: _currentPage == index
-            ? const Color(0xFF5CB85C)
-            : const Color(0xFFD8D8D8),
+        color:
+        _currentPage == index ? const Color(0xFF5CB85C) : Colors.grey[300],
         borderRadius: BorderRadius.circular(5),
       ),
     );
@@ -180,10 +208,12 @@ class OnboardingPage {
   final String title;
   final String description;
   final IconData image;
+  final String backgroundImage;
 
   OnboardingPage({
     required this.title,
     required this.description,
     required this.image,
+    required this.backgroundImage,
   });
 }

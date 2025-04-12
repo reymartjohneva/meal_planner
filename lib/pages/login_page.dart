@@ -36,7 +36,6 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // Navigate to home page on successful login
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/onboarding');
       }
@@ -84,7 +83,6 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                // App Logo with enhanced animation
                 TweenAnimationBuilder(
                   tween: Tween<double>(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 1000),
@@ -93,38 +91,17 @@ class _LoginPageState extends State<LoginPage> {
                     return Transform.scale(
                       scale: value,
                       child: Center(
-                        child: Container(
-                          width: 130,
-                          height: 130,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.green.shade300, Colors.green.shade600],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.green.withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.restaurant_menu,
-                            size: 70,
-                            color: Colors.white,
-                          ),
+                        child: Image.asset(
+                          'assets/app_icon.png',
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     );
                   },
                 ),
                 const SizedBox(height: 32),
-
-                // Animated welcome text
                 TweenAnimationBuilder(
                   tween: Tween<double>(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 800),
@@ -164,10 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Error message with animation
                 if (_errorMessage != null)
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -201,8 +175,6 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-
-                // Enhanced Email Field
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
@@ -233,8 +205,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Enhanced Password Field
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
@@ -276,8 +246,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Remember me and Forgot Password
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -332,8 +300,6 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
                 const SizedBox(height: 30),
-
-                // Enhanced Sign In Button
                 Container(
                   height: 60,
                   decoration: BoxDecoration(
@@ -366,7 +332,8 @@ class _LoginPageState extends State<LoginPage> {
                         color: Colors.white,
                         strokeWidth: 2.5,
                       ),
-                    ) : const Text(
+                    )
+                        : const Text(
                       'Sign In',
                       style: TextStyle(
                         fontSize: 18,
@@ -377,8 +344,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Sign Up Option
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                   decoration: BoxDecoration(
