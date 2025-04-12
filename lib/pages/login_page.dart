@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
       );
       // Navigate to home page on successful login
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/onboarding');
       }
     } on FirebaseAuthException catch (e) {
       String message;

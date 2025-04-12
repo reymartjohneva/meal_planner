@@ -531,6 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Add this line to remove the back button
         actions: [
           // Theme toggle button
           IconButton(
