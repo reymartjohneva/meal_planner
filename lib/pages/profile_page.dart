@@ -565,7 +565,11 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> performLogout(BuildContext context) async {
     try {
       await authService.value.signOut();
-      Navigator.pushReplacementNamed(context, '/');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login',
+            (route) => false,
+      );
     } catch (e) {
       // Handle any errors during logout
       ScaffoldMessenger.of(context).showSnackBar(

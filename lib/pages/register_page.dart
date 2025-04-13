@@ -58,7 +58,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Navigate to home page or profile setup page
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home'); // Replace with your route
+        Navigator.pushReplacementNamed(context, '/onboarding'); // Replace with your route
       }
     } on FirebaseAuthException catch (e) {
       setState(() {

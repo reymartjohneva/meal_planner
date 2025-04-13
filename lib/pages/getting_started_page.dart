@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/firestore_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -12,6 +13,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   // Fixed theme color matching your original green
   final Color _themeColor = const Color(0xFF5CB85C);
+  final FirestoreService _firestoreService = FirestoreService();
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
@@ -41,6 +43,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _completeOnboarding() async {
+    try {
+      await _firestoreService.setOnboardingCompleted();
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home',
+            (route) => false,
+      );
+    } catch (e) {
+      print('Error completing onboarding: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   @override
@@ -232,9 +250,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Enhanced navigation buttons
           _currentPage == _pages.length - 1
               ? ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/home');
-            },
+            onPressed: _completeOnboarding,
             style: ElevatedButton.styleFrom(
               backgroundColor: _themeColor,
               foregroundColor: Colors.white,
