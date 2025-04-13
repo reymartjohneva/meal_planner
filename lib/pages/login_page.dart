@@ -14,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _acceptedTerms = false; // New state for terms acceptance
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
@@ -25,7 +26,102 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // Show terms and conditions dialog
+  void _showTermsAndConditions() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Terms and Conditions',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTermsSection('1. Acceptance of Terms',
+                    'By accessing and using PlannerHut, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.'),
+                _buildTermsSection('2. User Accounts',
+                    'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.'),
+                _buildTermsSection('3. Privacy Policy',
+                    'Your use of PlannerHut is also governed by our Privacy Policy, which outlines how we collect, use, and protect your personal information.'),
+                _buildTermsSection('4. User Content',
+                    'You retain all rights to any content you submit, post, or display on or through PlannerHut. By submitting content, you grant PlannerHut a worldwide, non-exclusive license to use, reproduce, and display such content.'),
+                _buildTermsSection('5. Prohibited Activities',
+                    'You agree not to engage in any activity that may interfere with or disrupt the Services or servers connected to PlannerHut.'),
+                _buildTermsSection('6. Limitation of Liability',
+                    'PlannerHut shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service.'),
+                _buildTermsSection('7. Meal Plans and Nutritional Information',
+                    'The meal plans and nutritional information provided through PlannerHut are for informational purposes only and should not be considered medical advice. Always consult with a healthcare professional before making significant changes to your diet.'),
+                _buildTermsSection('8. Changes to Terms',
+                    'PlannerHut reserves the right to modify these Terms at any time. We will provide notice of significant changes by posting an announcement on our service.'),
+                _buildTermsSection('9. Termination',
+                    'PlannerHut reserves the right to terminate or suspend your account and access to the Services at our sole discretion, without notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties, or for any other reason.'),
+                _buildTermsSection('10. Governing Law',
+                    'These Terms shall be governed by and construed in accordance with the laws, without regard to its conflict of law provisions.'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.green,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        );
+      },
+    );
+  }
+
+  // Helper method to build each terms section
+  Widget _buildTermsSection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            content,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _signIn() async {
+    // Check if terms are accepted
+    if (!_acceptedTerms) {
+      setState(() {
+        _errorMessage = 'Please accept the Terms and Conditions to continue.';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -295,6 +391,54 @@ class _LoginPageState extends State<LoginPage> {
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Terms and Conditions checkbox
+                Row(
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Checkbox(
+                        value: _acceptedTerms,
+                        activeColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _acceptedTerms = value ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            'I agree to the ',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _showTermsAndConditions,
+                            child: const Text(
+                              'Terms and Conditions',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
