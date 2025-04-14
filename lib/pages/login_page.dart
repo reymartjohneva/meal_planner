@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import 'dart:async';
 
 class LoginPage extends StatefulWidget {
@@ -13,6 +14,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
   bool _rememberMe = false;
   bool _acceptedTerms = false; // New state for terms acceptance
   bool _isLoading = false;
@@ -133,7 +135,41 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/onboarding');
+        User? user;
+        for (int i = 0; i < 5; i++) {
+          user = FirebaseAuth.instance.currentUser;
+          if (user != null) break;
+          print('Waiting for auth state, attempt ${i + 1}/5');
+          await Future.delayed(Duration(milliseconds: 100));
+        }
+        print('Sign-in user: ${user?.uid}');
+        if (user == null) {
+          throw Exception('User not authenticated after sign-in');
+        }
+        try {
+          final isOnboardingCompleted = await _firestoreService.isOnboardingCompleted();
+          print('isOnboardingCompleted: $isOnboardingCompleted');
+          if (isOnboardingCompleted) {
+            print('Navigating to /home');
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+                  (route) => false,
+            );
+          } else {
+            print('Navigating to /onboarding');
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/onboarding',
+                  (route) => false,
+            );
+          }
+        } catch (e) {
+          print('Error checking onboarding: $e');
+          setState(() {
+            _errorMessage = 'Error checking onboarding status. Please try again.';
+          });
+        }
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -155,6 +191,7 @@ class _LoginPageState extends State<LoginPage> {
         _errorMessage = message;
       });
     } catch (e) {
+      print('Sign-in error: $e');
       setState(() {
         _errorMessage = 'An error occurred. Please try again.';
       });

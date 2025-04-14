@@ -5,10 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FirestoreService {
   final CollectionReference meals =
       FirebaseFirestore.instance.collection('meals');
-  final String? userId = FirebaseAuth.instance.currentUser?.uid;
+  final CollectionReference users =
+      FirebaseFirestore.instance.collection('users');
 
   // READ
   Stream<QuerySnapshot> getMeals() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
 
     return meals
@@ -24,6 +26,7 @@ class FirestoreService {
     required int calories,
     required DateTime dateTime,
   }) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
 
     await meals.add({
@@ -49,6 +52,7 @@ class FirestoreService {
     String? mood,
     String? notes,
   }) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
 
     Map<String, dynamic> data = {
@@ -68,13 +72,32 @@ class FirestoreService {
 
   // DELETE
   Future<void> deleteMeal(String mealId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) throw Exception('User not authenticated');
 
     await meals.doc(mealId).delete();
   }
 
-}
 
+  Future<void> setOnboardingCompleted() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+    print('Setting onboardingCompleted for user: $userId');
+    await users.doc(userId).set(
+      {'onboardingCompleted': true},
+      SetOptions(merge: true),
+    );
+  }
+
+  Future<bool> isOnboardingCompleted() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('User not authenticated');
+    final doc = await users.doc(userId).get();
+    print('Firestore doc exists: ${doc.exists}, data: ${doc.data()}');
+    return doc.exists && (doc.data() as Map<String, dynamic>)['onboardingCompleted'] == true;
+  }
+
+}
 
 
 
