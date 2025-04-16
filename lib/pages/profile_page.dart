@@ -43,7 +43,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _currentUser = authService.value.currentUser;
 
       // Fetch additional user data from Firestore if needed
-      // This is where you would get follower counts, projects, etc.
+      // This is where you would get meal plans, dietary preferences, etc.
       // For example:
       // final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
       // _userData = userDoc.data();
@@ -74,16 +74,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Color _getAvatarColor(String? displayName) {
     if (displayName == null || displayName.isEmpty) {
-      return const Color(0xFF6366F1);
+      return const Color(0xFF4CAF50); // Green for meal planner theme
     }
 
     final List<Color> colorOptions = [
-      const Color(0xFF6366F1), // Indigo
-      const Color(0xFF8B5CF6), // Purple
-      const Color(0xFFEC4899), // Pink
-      const Color(0xFFF43F5E), // Rose
-      const Color(0xFF0EA5E9), // Sky
-      const Color(0xFF10B981), // Emerald
+      const Color(0xFF4CAF50), // Green
+      const Color(0xFF8BC34A), // Light Green
+      const Color(0xFFCDDC39), // Lime
+      const Color(0xFFFF9800), // Orange
+      const Color(0xFFFF5722), // Deep Orange
+      const Color(0xFF795548), // Brown
     ];
 
     final colorIndex = displayName.codeUnitAt(0) % colorOptions.length;
@@ -189,12 +189,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1),
+                          color: const Color(0xFF4CAF50),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2.5),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6366F1).withOpacity(0.4),
+                              color: const Color(0xFF4CAF50).withOpacity(0.4),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -239,10 +239,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                    borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 1.5),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6366F1)),
+                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF4CAF50)),
                 ),
               ),
 
@@ -250,7 +250,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Bio Field
               const Text(
-                'Bio',
+                'Food Preferences',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -262,7 +262,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 controller: _bioController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Tell us about yourself',
+                  hintText: 'Share your dietary preferences, allergies, or favorite cuisines',
                   filled: true,
                   fillColor: Colors.grey.shade50,
                   border: OutlineInputBorder(
@@ -275,10 +275,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                    borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 1.5),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  prefixIcon: const Icon(Icons.description_outlined, color: Color(0xFF6366F1)),
+                  prefixIcon: const Icon(Icons.restaurant_menu, color: Color(0xFF4CAF50)),
                 ),
               ),
 
@@ -290,7 +290,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _saveProfileChanges(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
+                  backgroundColor: const Color(0xFF4CAF50),
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
@@ -335,7 +335,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           child: const CircularProgressIndicator(
-            color: Color(0xFF6366F1),
+            color: Color(0xFF4CAF50),
           ),
         ),
       ),
@@ -379,7 +379,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: const Color(0xFF4CAF50),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -422,10 +422,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: const Color(0xFFF9FBF9), // Slightly green-tinted background
       appBar: AppBar(
         title: const Text(
-          'Profile',
+          'My Profile',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Color(0xFF1F2937),
@@ -448,7 +448,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ],
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF6366F1)),
+            child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Color(0xFF4CAF50)),
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -471,7 +471,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.settings_outlined, size: 20, color: Color(0xFF6366F1)),
+                child: const Icon(Icons.settings_outlined, size: 20, color: Color(0xFF4CAF50)),
               ),
               onPressed: () {
                 // Navigate to settings screen
@@ -481,12 +481,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF6366F1),
+        color: const Color(0xFF4CAF50),
         onRefresh: _loadUserData,
         child: _isLoading
             ? const Center(
           child: CircularProgressIndicator(
-            color: Color(0xFF6366F1),
+            color: Color(0xFF4CAF50),
           ),
         )
             : _errorMessage.isNotEmpty
@@ -512,7 +512,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ElevatedButton(
                 onPressed: _loadUserData,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
+                  backgroundColor: const Color(0xFF4CAF50),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -537,62 +537,63 @@ class _ProfilePageState extends State<ProfilePage> {
     final avatarColor = _getAvatarColor(userName);
 
     // Get dynamic stats from _userData (these would be fetched from your database)
-    final projectsCount = _userData?['projects_count'] ?? '0';
-    final followersCount = _userData?['followers_count'] ?? '0';
-    final followingCount = _userData?['following_count'] ?? '0';
-    final userBio = _userData?['bio'] ?? 'No bio available';
+    final mealPlansCount = _userData?['meal_plans_count'] ?? '0';
+    final savedRecipesCount = _userData?['saved_recipes_count'] ?? '0';
+    final completedMealsCount = _userData?['completed_meals_count'] ?? '0';
+    final userPreferences = _userData?['bio'] ?? 'No preferences set';
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         children: [
-          // Header with gradient background
+          // Header with food pattern background
           Container(
-            height: 150,
+            height: 120,
             width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF6366F1),
-                  Color(0xFF8B5CF6),
-                ],
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              image: DecorationImage(
+                image: const AssetImage('assets/images/food_pattern.png'), // Add a subtle food pattern
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Colors.green.withOpacity(0.2),
+                  BlendMode.dstATop,
+                ),
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
             ),
           ),
 
-          // Profile Avatar (positioned on top of the gradient)
+          // Profile Avatar (positioned on top of the pattern)
           Transform.translate(
-            offset: const Offset(0, -75),
+            offset: const Offset(0, -60),
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 5),
+                border: Border.all(color: Colors.white, width: 4),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    spreadRadius: 5,
+                    blurRadius: 10,
+                    spreadRadius: 2,
                   ),
                 ],
               ),
               child: _currentUser?.photoURL != null
                   ? CircleAvatar(
-                radius: 75,
+                radius: 60,
                 backgroundImage: NetworkImage(_currentUser!.photoURL!),
               )
                   : CircleAvatar(
-                radius: 75,
+                radius: 60,
                 backgroundColor: avatarColor,
                 child: Text(
                   userInitials,
                   style: const TextStyle(
-                    fontSize: 44,
+                    fontSize: 36,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -603,7 +604,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
           // Content (shifted up to overlap with avatar)
           Transform.translate(
-            offset: const Offset(0, -60),
+            offset: const Offset(0, -40),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
@@ -612,14 +613,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   Text(
                     userName,
                     style: const TextStyle(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
                       color: Color(0xFF1F2937),
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // Email with icon
                   Row(
@@ -627,35 +627,34 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       const Icon(
                         Icons.email_outlined,
-                        size: 16,
-                        color: Color(0xFF6366F1),
+                        size: 14,
+                        color: Color(0xFF4CAF50),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         userEmail,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF4B5563),
-                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Bio card
+                  // Food Preferences card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          spreadRadius: 2,
+                          blurRadius: 8,
+                          spreadRadius: 1,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -666,13 +665,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         const Row(
                           children: [
                             Icon(
-                              Icons.info_outline,
+                              Icons.restaurant,
                               size: 18,
-                              color: Color(0xFF6366F1),
+                              color: Color(0xFF4CAF50),
                             ),
                             SizedBox(width: 8),
                             Text(
-                              'About Me',
+                              'Food Preferences',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -683,7 +682,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          userBio,
+                          userPreferences,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Color(0xFF4B5563),
@@ -694,20 +693,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                  // Stats cards with enhanced design
+                  // Stats cards with food-themed icons
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          spreadRadius: 2,
+                          blurRadius: 8,
+                          spreadRadius: 1,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -715,84 +714,57 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStatCard(context, projectsCount.toString(), 'Projects', Icons.folder_outlined),
+                        _buildStatCard(context, mealPlansCount.toString(), 'Meal Plans', Icons.calendar_today),
                         _buildDivider(),
-                        _buildStatCard(context, followersCount.toString(), 'Followers', Icons.people_outline),
+                        _buildStatCard(context, savedRecipesCount.toString(), 'Recipes', Icons.bookmark),
                         _buildDivider(),
-                        _buildStatCard(context, followingCount.toString(), 'Following', Icons.person_add_alt_outlined),
+                        _buildStatCard(context, completedMealsCount.toString(), 'Cooked', Icons.check_circle_outline),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Edit Profile Button with gradient
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withOpacity(0.3),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _showEditProfileModal(context);
-                      },
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit Profile'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        disabledForegroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                        minimumSize: const Size(double.infinity, 56),
-                      ),
                     ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  // Logout button with glass effect
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        performLogout(context);
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text('Logout'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: const Color(0xFFFEF2F2),
-                        foregroundColor: const Color(0xFFEF4444),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                        minimumSize: const Size(double.infinity, 56),
+                  // Edit Profile Button
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _showEditProfileModal(context);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Profile'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 0,
+                      minimumSize: const Size(double.infinity, 48),
                     ),
                   ),
 
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 16),
+
+                  // Logout button
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      performLogout(context);
+                    },
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('Logout'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: const Color(0xFFEF4444),
+                      side: const BorderSide(color: Color(0xFFEF4444)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -809,31 +781,30 @@ class _ProfilePageState extends State<ProfilePage> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
+            color: const Color(0xFFECF8ED), // Light green background
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
             size: 20,
-            color: const Color(0xFF6366F1),
+            color: const Color(0xFF4CAF50),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 18,
             color: Color(0xFF1F2937),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           label,
           style: const TextStyle(
             fontSize: 12,
             color: Color(0xFF6B7280),
-            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -842,7 +813,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildDivider() {
     return Container(
-      height: 40,
+      height: 36,
       width: 1,
       color: Colors.grey.shade200,
     );
@@ -856,7 +827,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           title: const Text(
             'Logout',
@@ -907,7 +878,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                       child: const CircularProgressIndicator(
-                        color: Color(0xFF6366F1),
+                        color: Color(0xFF4CAF50),
                       ),
                     ),
                   ),
