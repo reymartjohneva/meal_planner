@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../pages/setting_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -454,6 +455,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.pop(context);
           },
         ),
+        // In the ProfilePage class, update the settings icon in the appBar actions:
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -475,6 +477,10 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               onPressed: () {
                 // Navigate to settings screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                );
               },
             ),
           ),
