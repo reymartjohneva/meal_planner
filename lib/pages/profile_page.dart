@@ -44,7 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _currentUser = authService.value.currentUser;
 
       // Fetch additional user data from Firestore if needed
-      // This is where you would get meal plans, dietary preferences, etc.
+      // This is where you would get user preferences, etc.
       // For example:
       // final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
       // _userData = userDoc.data();
@@ -75,7 +75,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Color _getAvatarColor(String? displayName) {
     if (displayName == null || displayName.isEmpty) {
-      return const Color(0xFF4CAF50); // Green for meal planner theme
+      return const Color(0xFF4CAF50); // Green for theme
     }
 
     final List<Color> colorOptions = [
@@ -455,7 +455,6 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.pop(context);
           },
         ),
-        // In the ProfilePage class, update the settings icon in the appBar actions:
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -541,11 +540,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final userEmail = _currentUser?.email ?? 'No email available';
     final userInitials = _getInitials(userName);
     final avatarColor = _getAvatarColor(userName);
-
-    // Get dynamic stats from _userData (these would be fetched from your database)
-    final mealPlansCount = _userData?['meal_plans_count'] ?? '0';
-    final savedRecipesCount = _userData?['saved_recipes_count'] ?? '0';
-    final completedMealsCount = _userData?['completed_meals_count'] ?? '0';
     final userPreferences = _userData?['bio'] ?? 'No preferences set';
 
     return SingleChildScrollView(
@@ -559,7 +553,7 @@ class _ProfilePageState extends State<ProfilePage> {
             decoration: BoxDecoration(
               color: const Color(0xFF4CAF50),
               image: DecorationImage(
-                image: const AssetImage('assets/images/food_pattern.png'), // Add a subtle food pattern
+                image: const AssetImage('assets/images/food_pattern.png'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
                   Colors.green.withOpacity(0.2),
@@ -699,36 +693,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
-
-                  // Stats cards with food-themed icons
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatCard(context, mealPlansCount.toString(), 'Meal Plans', Icons.calendar_today),
-                        _buildDivider(),
-                        _buildStatCard(context, savedRecipesCount.toString(), 'Recipes', Icons.bookmark),
-                        _buildDivider(),
-                        _buildStatCard(context, completedMealsCount.toString(), 'Cooked', Icons.check_circle_outline),
-                      ],
-                    ),
-                  ),
-
                   const SizedBox(height: 20),
 
                   // Edit Profile Button
@@ -777,51 +741,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-    );
-  }
-
-  // Helper method to create stat cards
-  Widget _buildStatCard(BuildContext context, String value, String label, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFECF8ED), // Light green background
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFF4CAF50),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      height: 36,
-      width: 1,
-      color: Colors.grey.shade200,
     );
   }
 
