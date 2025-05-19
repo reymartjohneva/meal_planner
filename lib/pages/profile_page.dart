@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../pages/setting_page.dart';
+import '../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,6 +17,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   String _errorMessage = '';
   Map<String, dynamic>? _userData;
+  final FirestoreService _firestoreService = FirestoreService();
 
   // Controllers for edit fields
   final TextEditingController _nameController = TextEditingController();
@@ -44,10 +47,10 @@ class _ProfilePageState extends State<ProfilePage> {
       _currentUser = authService.value.currentUser;
 
       // Fetch additional user data from Firestore if needed
-      // This is where you would get user preferences, etc.
-      // For example:
-      // final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUser!.uid).get();
-      // _userData = userDoc.data();
+      if (_currentUser != null) {
+        final userDoc = await _firestoreService.users.doc(_currentUser!.uid).get();
+        _userData = userDoc.exists ? userDoc.data() as Map<String, dynamic>? : {'bio': ''};
+      }
 
       setState(() {
         _isLoading = false;
@@ -349,13 +352,14 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       // Update Firestore bio if changed
-      if (_bioController.text != _userData?['bio']) {
-        // Update Firestore document with new bio
-        // For example:
-        // await FirebaseFirestore.instance
-        //   .collection('users')
-        //   .doc(_currentUser!.uid)
-        //   .update({'bio': _bioController.text});
+      if (_currentUser != null) {
+        await _firestoreService.users.doc(_currentUser!.uid).set(
+          {
+            'bio': _bioController.text,
+            'onboardingCompleted': true, // Ensure onboardingCompleted is set
+          },
+          SetOptions(merge: true),
+        );
       }
 
       // Close loading dialog
