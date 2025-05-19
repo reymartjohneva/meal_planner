@@ -539,12 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _toggleTheme,
             tooltip: _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              _navigateToRemindersManagementScreen();
-            },
-          ),
+
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () {
