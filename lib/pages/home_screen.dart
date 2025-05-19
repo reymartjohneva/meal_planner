@@ -6,7 +6,7 @@ import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 import '../models/meal_reminder.dart';
 import 'profile_page.dart';
-import '../screens/meal_reminders_screen.dart';
+
 import '../screens/calendar_screen.dart';
 import '../screens/grocery_page.dart';
 import '../screens/chatbot_page.dart';
@@ -539,12 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _toggleTheme,
             tooltip: _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              _navigateToRemindersManagementScreen();
-            },
-          ),
+
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () {
@@ -793,7 +788,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
+  } 
 
   Widget _buildHeader(String today, Color primaryColor, Color textColor, Color subtitleColor) {
     return Padding(
@@ -1029,18 +1024,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text('Reminder set successfully!'),
-          TextButton(
-            onPressed: () {
-              _navigateToRemindersManagementScreen();
-            },
-            child: const Text(
-              'VIEW ALL',
-              style: TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+
         ],
       ),
       behavior: SnackBarBehavior.floating,
@@ -1160,18 +1144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text('Reminder set successfully!'),
-          TextButton(
-            onPressed: () {
-              _navigateToRemindersManagementScreen();
-            },
-            child: const Text(
-              'VIEW ALL',
-              style: TextStyle(
-                color: Colors.amber,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+
         ],
       ),
       behavior: SnackBarBehavior.floating,
@@ -1184,18 +1157,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Navigate to reminders management screen
-  void _navigateToRemindersManagementScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MealRemindersScreen(
-          reminders: _mealReminders,
-          onDelete: _deleteReminder,
-        ),
-      ),
-    );
-  }
+
 
   // Delete a reminder
   void _deleteReminder(int id) {
