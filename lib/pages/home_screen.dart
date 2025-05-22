@@ -518,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Theme colors based on dark mode state
     final primaryColor = _isDarkMode ? Colors.green.shade300 : Colors.green.shade600;
     final secondaryColor = _isDarkMode ? Colors.lightGreen.shade400 : Colors.lightGreen.shade600;
-    final backgroundColor = _isDarkMode ? Colors.green.shade900 : Colors.green.shade50;
+    final backgroundColor = _isDarkMode ? Colors.white : Colors.white;
     final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
     final textColor = _isDarkMode ? Colors.white : Colors.black;
     final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
