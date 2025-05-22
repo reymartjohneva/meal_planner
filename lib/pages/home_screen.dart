@@ -6,6 +6,8 @@ import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 import '../models/meal_reminder.dart';
 import 'profile_page.dart';
+import 'package:provider/provider.dart';
+import '../services/theme_provider.dart';
 
 import '../screens/calendar_screen.dart';
 import '../screens/grocery_page.dart';
@@ -58,12 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await _notificationService.init();
     await _notificationService.requestPermissions();
     // TODO: Load saved reminders from storage
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
   }
 
   void _addMeal() {
@@ -252,14 +248,36 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             return AlertDialog(
-              title: Text(isEditing ? 'Edit Meal' : 'Add Meal'),
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black
+                  : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                isEditing ? 'Edit Meal' : 'Add Meal',
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
               content: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<String>(
                       value: selectedMealType,
-                      hint: const Text('Select Meal Type'),
+                      hint: Text(
+                        'Select Meal Type',
+                        style: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                      ),
                       onChanged: (String? newValue) {
                         setState(() {
                           _localSelectedMealType = newValue;
@@ -270,33 +288,130 @@ class _HomeScreenState extends State<HomeScreen> {
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black,
+                            ),
+                          ),
                         );
                       }).toList(),
-                      decoration: const InputDecoration(labelText: 'Meal Type'),
+                      decoration: InputDecoration(
+                        labelText: 'Meal Type',
+                        labelStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      dropdownColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade800
+                          : Colors.white,
                     ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: descriptionController,
-                      decoration: const InputDecoration(labelText: 'Description'),
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        labelStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
                       maxLines: 2,
                     ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: caloriesController,
-                      decoration: const InputDecoration(labelText: 'Calories'),
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Calories',
+                        labelStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
                       keyboardType: TextInputType.number,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
 
                     InkWell(
                       onTap: () => _selectDateTime(context),
+                      borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(4),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -304,17 +419,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Date & Time',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                Text(
+                                  'Date & Time',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   _formatDateTimeDisplay(),
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
                                 ),
                               ],
                             ),
-                            const Icon(Icons.calendar_today),
+                            Icon(
+                              Icons.calendar_today,
+                              color: Theme.of(context).primaryColor,
+                            ),
                           ],
                         ),
                       ),
@@ -322,16 +451,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   child: const Text('Cancel'),
                 ),
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () async {
                     print('Before saving, selected meal type: $_localSelectedMealType'); // Debug
                     await onSave(_localSelectedMealType);
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
                   child: Text(isEditing ? 'Update' : 'Add Meal'),
                 ),
               ],
@@ -514,30 +663,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
-
-    // Theme colors based on dark mode state
-    final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
-    final secondaryColor = _isDarkMode ? Colors.amber.shade400 : Colors.amber.shade600;
-    final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
-    final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
-    final textColor = _isDarkMode ? Colors.white : Colors.black;
-    final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('PlannerHut',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false, // Add this line to remove the back button
         actions: [
           // Theme toggle button
           IconButton(
-            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            onPressed: _toggleTheme,
-            tooltip: _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => themeProvider.toggleTheme() ,
+            tooltip: themeProvider.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
           ),
 
           IconButton(
@@ -575,21 +717,21 @@ class _HomeScreenState extends State<HomeScreen> {
           return SingleChildScrollView(
             child: Column(
               children: [
-                _buildWellnessInsights(primaryColor, secondaryColor, textColor),
+                _buildWellnessInsights(),
                 const SizedBox(height: 25),
-                _buildHeader(today, primaryColor, textColor, subtitleColor),
+                _buildHeader(today),
                 const SizedBox(height: 10),
                 _buildProgressBar(progress),
                 const SizedBox(height: 10),
                 meals.isEmpty
-                    ? _buildEmptyState(subtitleColor)
+                    ? _buildEmptyState()
                     : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: meals.length,
                   itemBuilder: (context, index) {
                     final meal = meals[index];
-                    return _buildMealCard(index, meal, primaryColor, cardColor, textColor, subtitleColor);
+                    return _buildMealCard(index, meal);
                   },
                 ),
                 const SizedBox(height: 20),
@@ -600,15 +742,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addMeal,
-        backgroundColor: secondaryColor,
+        backgroundColor: Theme.of(context).colorScheme.secondary,
         child: const Icon(Icons.add, color: Colors.white),
         elevation: 4,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
-        backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Theme.of(context).textTheme.bodySmall?.color,
+        backgroundColor: Theme.of(context).cardColor,
         type: BottomNavigationBarType.fixed, // Added to support 5 items
         onTap: (index) {
           if (index == 1) { // Calendar tab
@@ -687,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEmptyState(Color subtitleColor) {
+  Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       child: Column(
@@ -695,34 +837,33 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
               Icons.restaurant_outlined,
               size: 80,
-              color: _isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
+              color: Theme.of(context).textTheme.bodySmall?.color,
+          ),
           const SizedBox(height: 16),
           Text(
             'No meals added yet',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Tap the + button to add your first meal',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: subtitleColor,
+            style: Theme.of(context).textTheme.bodySmall,
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor, Color textColor) {
+  Widget _buildWellnessInsights() {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
-        color: primaryColor,
+        color: Theme.of(context).primaryColor,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
@@ -756,7 +897,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 24),
           Card(
-            color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
+            color: Theme.of(context).cardColor,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -770,17 +911,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Today\'s Wellness Tip',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: primaryColor,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: textColor,
+                    style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                  ),
                 ],
               ),
             ),
@@ -788,9 +926,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  } 
+  }
 
-  Widget _buildHeader(String today, Color primaryColor, Color textColor, Color subtitleColor) {
+  Widget _buildHeader(String today) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -804,27 +942,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
-                    color: textColor,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   )),
               const SizedBox(height: 4),
-              Text(today, style: TextStyle(color: subtitleColor)),
+              Text(today, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
           OutlinedButton.icon(
             onPressed: _addMeal,
-            icon: Icon(Icons.add, size: 18, color: primaryColor),
-            label: Text('Add Meal', style: TextStyle(color: primaryColor)),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: primaryColor),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            icon: Icon(Icons.add, size: 18),
+            label: Text('Add Meal'),
+            style: Theme.of(context).outlinedButtonTheme.style,
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor, Color cardColor, Color textColor, Color subtitleColor) {
+  Widget _buildMealCard(int index, Map<String, dynamic> meal) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isLogged = meal['logged'] == true;
     final mealId = meal['id'];
 
@@ -835,7 +971,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final timeFormatter = DateFormat('h:mm a');
     final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
 
-    // Icon and color for satisfaction rating
     IconData satisfactionIcon = Icons.sentiment_neutral;
     Color satisfactionColor = Colors.grey;
 
@@ -855,87 +990,118 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      elevation: 2,
-      color: cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isLogged ? Colors.teal.shade200 : _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-          width: isLogged ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              radius: 30,
-              backgroundColor: primaryColor.withOpacity(0.2),
-              child: Icon(
-                Icons.restaurant,
-                color: primaryColor,
-              ),
-            ),
-            title: Text(
-                meal['mealType'],
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                )
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$dateTimeStr',
-                  style: TextStyle(color: subtitleColor),
-                ),
-                Text(
-                  'Calories: ${meal['calories']}',
-                  style: TextStyle(color: subtitleColor),
-                ),
-                if (isLogged && meal['mood'] != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Mood: ${meal['mood']}',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: subtitleColor,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isLogged)
-                  Icon(satisfactionIcon, color: satisfactionColor, size: 50)
-              ],
-            ),
-            onTap: () => _showMealDetails(meal, mealId),
+    return GestureDetector(
+      onTap: () => _showMealDetails(meal, mealId),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+              Theme.of(context).primaryColor.withOpacity(0.2),
+              Theme.of(context).primaryColor.withOpacity(0.1),
+            ]
+                : [
+              Theme.of(context).primaryColor.withOpacity(0.15),
+              Theme.of(context).primaryColor.withOpacity(0.05),
+            ],
           ),
-          if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isLogged
+                ? Colors.teal.shade200
+                : Theme.of(context).primaryColor.withOpacity(isDarkMode ? 0.3 : 0.2),
+            width: isLogged ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.restaurant,
+              size: 20,
+              color: Theme.of(context).primaryColor,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Divider(color: _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
-                  Text(
-                    '${meal['notes']}',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: subtitleColor,
-                      fontSize: 13,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          meal['mealType'],
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: isDarkMode
+                                ? Colors.white
+                                : Theme.of(context).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      ),
+                      if (isLogged)
+                        Icon(
+                          satisfactionIcon,
+                          color: satisfactionColor,
+                          size: 20,
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dateTimeStr,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    'Calories: ${meal['calories']}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (isLogged && meal['mood'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Mood: ${meal['mood']}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${meal['notes']}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          fontSize: 13,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                 ],
               ),
             ),
-        ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Theme.of(context).primaryColor.withOpacity(0.7),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1187,7 +1353,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       builder: (context) {
         final isLogged = meal['logged'] == true;
-        final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
+        final primaryColor = _isDarkMode ? Colors.green.shade300 : Colors.green.shade600;
         final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
         final textColor = _isDarkMode ? Colors.white : Colors.black;
         final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
@@ -1224,7 +1390,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Container(
           padding: const EdgeInsets.all(24),
-          color: backgroundColor,
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1234,10 +1400,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     meal['mealType'],
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: textColor,
                     ),
                   ),
                   IconButton(
@@ -1249,12 +1414,12 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 16, color: subtitleColor),
+                  Icon(Icons.calendar_today, size: 16, color: Theme.of(context).textTheme.bodySmall?.color),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       dateTimeStr,
-                      style: TextStyle(color: subtitleColor),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1262,24 +1427,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 6),
                   Text(
                     '${meal['calories']} calories',
-                    style: TextStyle(color: subtitleColor),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               Text(
                 'Description',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: textColor,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 meal['description'],
-                style: TextStyle(
-                  color: textColor,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 16,
                 ),
               ),
@@ -1294,10 +1457,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           'Satisfaction',
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -1310,7 +1472,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 8),
                             Text(
                               '$satisfactionText (${meal['satisfaction']}/5)',
-                              style: TextStyle(color: subtitleColor),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
                         ),
@@ -1322,22 +1484,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Mood',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: textColor,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: Theme.of(context).primaryColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
                               meal['mood'],
-                              style: TextStyle(color: primaryColor),
+                              style: TextStyle(color: Theme.of(context).primaryColor),
                             ),
                           ),
                         ],
@@ -1348,17 +1509,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
                   Text(
                     'Notes',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     meal['notes'],
-                    style: TextStyle(
-                      color: textColor,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -1373,11 +1532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     icon: const Icon(Icons.check),
                     label: const Text('Log This Meal'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
+                    style: Theme.of(context).elevatedButtonTheme.style,
                   ),
                 ),
               ],
@@ -1392,9 +1547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     icon: const Icon(Icons.alarm),
                     label: const Text('Set Reminder'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                    ),
+                    style: Theme.of(context).outlinedButtonTheme.style,
                   ),
                   OutlinedButton.icon(
                     onPressed: () {
@@ -1403,9 +1556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                    ),
+                    style: Theme.of(context).outlinedButtonTheme.style,
                   ),
                 ],
               ),

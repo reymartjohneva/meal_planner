@@ -206,7 +206,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Theme(
+      data: ThemeData.light(), // Forces light mode
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -321,6 +323,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: TextFormField(
                     controller: _emailController,
+                    cursorColor: Colors.black,
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'Enter your email',
@@ -352,6 +355,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    cursorColor: Colors.black,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Enter your password',
@@ -567,6 +571,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
+    ),
     );
   }
 }

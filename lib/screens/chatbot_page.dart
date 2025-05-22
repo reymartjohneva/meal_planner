@@ -61,7 +61,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('PlannerHut Chatbot'),
-        backgroundColor: primaryColor,
+        backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         elevation: 4,
         shape: const RoundedRectangleBorder(

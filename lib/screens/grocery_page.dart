@@ -354,6 +354,8 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
         ],
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Theme.of(context).primaryColor,
+          labelColor: Theme.of(context).primaryColor,
           tabs: [
             Tab(icon: Icon(Icons.search), text: 'Search'),
             Tab(icon: Icon(Icons.bookmark), text: 'Favorites'),
@@ -362,6 +364,7 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
       ),
       body: TabBarView(
         controller: _tabController,
+
         children: [
           // Search Tab
           _buildSearchTab(),
@@ -456,6 +459,9 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
               onPressed: () {
                 _tabController.animateTo(0);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+              ),
             ),
           ],
         ),
@@ -496,127 +502,142 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
   }
 
   Widget _buildRecipeGrid(List<dynamic> recipeList, {bool isFromSearch = false}) {
-    return GridView.builder(
+    return CustomScrollView(
       controller: isFromSearch ? _scrollController : null,
-      padding: EdgeInsets.all(10),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.8,
-      ),
-      itemCount: recipeList.length + (isFromSearch && hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index < recipeList.length) {
-          final recipe = recipeList[index];
-          // Extract calories if available
-          final nutrients = recipe['nutrition']?['nutrients'];
-          String calories = "N/A";
-          if (nutrients != null) {
-            final calorieInfo = nutrients.firstWhere(
-                  (n) => n['name'] == 'Calories',
-              orElse: () => {'amount': 0},
-            );
-            calories = "${calorieInfo['amount'].toInt()} cal";
-          }
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.all(10),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.8,
+            ),
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                final recipe = recipeList[index];
+                // Extract calories if available
+                final nutrients = recipe['nutrition']?['nutrients'];
+                String calories = "N/A";
+                if (nutrients != null) {
+                  final calorieInfo = nutrients.firstWhere(
+                        (n) => n['name'] == 'Calories',
+                    orElse: () => {'amount': 0},
+                  );
+                  calories = "${calorieInfo['amount'].toInt()} cal";
+                }
 
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => RecipeDetailPage(
-                    recipeId: recipe['id'],
-                    onFavoriteToggled: () {
-                      // Refresh favorites when returning from detail page
-                      if (_tabController.index == 1) {
-                        _loadFavorites();
-                      } else {
-                        setState(() {}); // Refresh UI to update favorite icon
-                      }
-                    },
-                  ),
-                ),
-              );
-            },
-            child: Card(
-              elevation: 4,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.network(
-                          recipe['image'],
-                          fit: BoxFit.cover,
-                          width: double.infinity,
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RecipeDetailPage(
+                          recipeId: recipe['id'],
+                          onFavoriteToggled: () {
+                            // Refresh favorites when returning from detail page
+                            if (_tabController.index == 1) {
+                              _loadFavorites();
+                            } else {
+                              setState(() {}); // Refresh UI to update favorite icon
+                            }
+                          },
                         ),
+                      ),
+                    );
+                  },
+                  child: Card(
+                    elevation: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.network(
+                                recipe['image'],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
 
-                        Positioned(
-                          top: 5,
-                          left: 5,
-                          child: FutureBuilder<bool>(
-                            future: FavoritesManager.isFavorite(recipe['id']),
-                            builder: (context, snapshot) {
-                              final isFavorited = snapshot.data ?? false;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
-                                  shape: BoxShape.circle,
+                              Positioned(
+                                top: 5,
+                                left: 5,
+                                child: FutureBuilder<bool>(
+                                  future: FavoritesManager.isFavorite(recipe['id']),
+                                  builder: (context, snapshot) {
+                                    final isFavorited = snapshot.data ?? false;
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.8),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(
+                                          isFavorited ? Icons.favorite : Icons.favorite_border,
+                                          color: isFavorited ? Colors.red : Colors.grey,
+                                        ),
+                                        onPressed: () => _toggleFavorite(recipe),
+                                        constraints: BoxConstraints.tightFor(width: 36, height: 36),
+                                        padding: EdgeInsets.all(4),
+                                        iconSize: 20,
+                                      ),
+                                    );
+                                  },
                                 ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    isFavorited ? Icons.favorite : Icons.favorite_border,
-                                    color: isFavorited ? Colors.red : Colors.grey,
-                                  ),
-                                  onPressed: () => _toggleFavorite(recipe),
-                                  constraints: BoxConstraints.tightFor(width: 36, height: 36),
-                                  padding: EdgeInsets.all(4),
-                                  iconSize: 20,
-                                ),
-                              );
-                            },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            recipe['title'],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        // Diet indicators
+                        Padding(
+                          padding: EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                          child: Wrap(
+                            spacing: 4,
+                            children: [
+                              if (recipe['vegetarian'] == true)
+                                _buildDietBadge('V', Colors.green),
+                              if (recipe['vegan'] == true)
+                                _buildDietBadge('Ve', Colors.green[700]!),
+                              if (recipe['glutenFree'] == true)
+                                _buildDietBadge('GF', Colors.orange),
+                              if (recipe['dairyFree'] == true)
+                                _buildDietBadge('DF', Colors.blue),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text(
-                      recipe['title'],
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  // Diet indicators
-                  Padding(
-                    padding: EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                    child: Wrap(
-                      spacing: 4,
-                      children: [
-                        if (recipe['vegetarian'] == true)
-                          _buildDietBadge('V', Colors.green),
-                        if (recipe['vegan'] == true)
-                          _buildDietBadge('Ve', Colors.green[700]!),
-                        if (recipe['glutenFree'] == true)
-                          _buildDietBadge('GF', Colors.orange),
-                        if (recipe['dairyFree'] == true)
-                          _buildDietBadge('DF', Colors.blue),
-                      ],
-                    ),
-                  ),
-                ],
+                );
+              },
+              childCount: recipeList.length,
+            ),
+          ),
+        ),
+        if (isLoading && isFromSearch && hasMore)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
             ),
-          );
-        } else {
-          return Center(child: CircularProgressIndicator());
-        }
-      },
+          ),
+      ],
     );
   }
 
@@ -714,14 +735,38 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.restaurant_menu,
-            size: 80,
-            color: Theme.of(context).primaryColor,
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Theme.of(context).primaryColor.withOpacity(0.7),
+                  Theme.of(context).primaryColor.withOpacity(0.3)
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Image.asset(
+                  'assets/app_icon.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ),
           SizedBox(height: 16),
           Text(
-            'Welcome to PlannerHut!',
+            'PlannerHut Recipes',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 8),
@@ -745,6 +790,7 @@ class _GroceryPageState extends State<GroceryPage> with SingleTickerProviderStat
               fetchRecipes(reset: true);
             },
             style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -818,34 +864,50 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
             SwitchListTile(
               title: Text('Vegetarian'),
               value: prefs.vegetarian,
+              activeColor: Theme.of(context).primaryColor,
+              activeTrackColor: Theme.of(context).primaryColor.withOpacity(0.4),
               onChanged: (value) => setState(() => prefs.vegetarian = value),
             ),
             SwitchListTile(
               title: Text('Vegan'),
               value: prefs.vegan,
+              activeColor: Theme.of(context).primaryColor,
+              activeTrackColor: Theme.of(context).primaryColor.withOpacity(0.4),
               onChanged: (value) => setState(() => prefs.vegan = value),
             ),
             SwitchListTile(
               title: Text('Gluten-Free'),
               value: prefs.glutenFree,
+              activeColor: Theme.of(context).primaryColor,
+              activeTrackColor: Theme.of(context).primaryColor.withOpacity(0.4),
               onChanged: (value) => setState(() => prefs.glutenFree = value),
             ),
             SwitchListTile(
               title: Text('Dairy-Free'),
               value: prefs.dairyFree,
+              activeColor: Theme.of(context).primaryColor,
+              activeTrackColor: Theme.of(context).colorScheme.primary.withOpacity(0.4),
               onChanged: (value) => setState(() => prefs.dairyFree = value),
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text('Maximum Calories per Serving'),
             ),
-            Slider(
-              value: prefs.maxCalories.toDouble(),
-              min: 100,
-              max: 2000,
-              divisions: 19,
-              label: '${prefs.maxCalories} cal',
-              onChanged: (value) => setState(() => prefs.maxCalories = value.toInt()),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: Theme.of(context).primaryColor,
+                thumbColor: Theme.of(context).primaryColor,
+                overlayColor:Theme.of(context).primaryColor.withOpacity(0.2),
+                inactiveTrackColor: Theme.of(context).primaryColor.withOpacity(0.3),
+              ),
+              child: Slider(
+                value: prefs.maxCalories.toDouble(),
+                min: 100,
+                max: 2000,
+                divisions: 19,
+                label: '${prefs.maxCalories} cal',
+                onChanged: (value) => setState(() => prefs.maxCalories = value.toInt()),
+              ),
             ),
             Center(
               child: Text(
@@ -864,6 +926,9 @@ class _PreferencesDialogState extends State<PreferencesDialog> {
         ElevatedButton(
           onPressed: () => Navigator.pop(context, prefs),
           child: Text('Apply'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
         ),
       ],
     );

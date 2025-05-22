@@ -95,7 +95,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Theme(
+        data: ThemeData.light(), // Forces light mode
+        child: Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -265,6 +267,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                         return null;
                       },
+                      cursorColor: Colors.black,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
                         hintText: 'Enter your full name',
@@ -309,6 +312,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                         return null;
                       },
+                      cursorColor: Colors.black,
                       decoration: InputDecoration(
                         labelText: 'Email Address',
                         hintText: 'Enter your email',
@@ -351,6 +355,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                         return null;
                       },
+                      cursorColor: Colors.black,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Create a password',
@@ -404,6 +409,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                         return null;
                       },
+                      cursorColor: Colors.black,
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
                         hintText: 'Confirm your password',
@@ -522,6 +528,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
       ),
+    )
     );
   }
 }

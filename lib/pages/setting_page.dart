@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,11 +14,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
   String _measurementUnit = 'Metric';
-
-  // Theme colors
-  final Color _primaryColor = const Color(0xFF4CAF50);
-  final Color _textColor = const Color(0xFF1F2937);
-  final Color _secondaryTextColor = const Color(0xFF6B7280);
 
   @override
   void initState() {
@@ -51,7 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
           child: CircularProgressIndicator(
-            color: _primaryColor,
+            color: Theme.of(context).primaryColor,
           ),
         ),
       ),
@@ -76,7 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
-        backgroundColor: _primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -89,14 +86,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FBF9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Settings',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
+            color: Theme.of(context).textTheme.bodyMedium?.color,
           ),
         ),
         centerTitle: true,
@@ -106,17 +104,10 @@ class _SettingsPageState extends State<SettingsPage> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.arrow_back_ios_new, size: 16, color: _primaryColor),
+            child: Icon(Icons.arrow_back_ios_new, size: 16, color: Theme.of(context).primaryColor),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -152,12 +143,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       _buildSwitchTile(
                         'Dark Mode',
                         'Use dark theme throughout the app',
-                        _darkModeEnabled,
+                        themeProvider.isDarkMode,
                         Icons.dark_mode_outlined,
                             (value) {
-                          setState(() {
-                            _darkModeEnabled = value;
-                          });
+                          themeProvider.toggleTheme();
                         },
                       ),
                       const Divider(height: 1),
@@ -233,7 +222,7 @@ class _SettingsPageState extends State<SettingsPage> {
             width: 4,
             height: 20,
             decoration: BoxDecoration(
-              color: _primaryColor,
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -243,7 +232,7 @@ class _SettingsPageState extends State<SettingsPage> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _textColor,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
         ],
@@ -254,7 +243,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildSettingsCard({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -283,7 +272,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       leading: Icon(
         icon,
-        color: _primaryColor,
+        color: Theme.of(context).primaryColor,
       ),
       title: Text(
         title,
@@ -295,7 +284,7 @@ class _SettingsPageState extends State<SettingsPage> {
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: _primaryColor,
+        activeColor: Theme.of(context).primaryColor,
       ),
     );
   }
@@ -314,7 +303,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       leading: Icon(
         icon,
-        color: _primaryColor,
+        color: Theme.of(context).primaryColor,
       ),
       title: Text(
         title,
@@ -349,7 +338,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       leading: Icon(
         icon,
-        color: _primaryColor,
+        color: Theme.of(context).primaryColor,
       ),
       title: Text(
         title,
@@ -360,7 +349,7 @@ class _SettingsPageState extends State<SettingsPage> {
       subtitle: Text(subtitle),
       trailing: Icon(
         Icons.chevron_right,
-        color: _secondaryTextColor,
+        color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
       ),
       onTap: onTap,
     );
@@ -370,7 +359,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return ElevatedButton(
       onPressed: _saveSettings,
       style: ElevatedButton.styleFrom(
-        backgroundColor: _primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(
@@ -417,7 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: _secondaryTextColor,
+                  color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -440,18 +429,18 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: _primaryColor),
+            Icon(icon, color: Theme.of(context).primaryColor),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: _textColor,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: _secondaryTextColor),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.secondary),
           ],
         ),
       ),
@@ -471,7 +460,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
-        backgroundColor: _primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -486,7 +475,7 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Help & Support coming soon'),
-        backgroundColor: _primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -500,7 +489,7 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('App version 1.0.0'),
-        backgroundColor: _primaryColor,
+        backgroundColor: Theme.of(context).primaryColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
