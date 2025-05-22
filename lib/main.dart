@@ -10,9 +10,11 @@ import 'firebase_options.dart';
 import 'pages/getting_started_page.dart';
 import 'services/firestore_service.dart';
 import 'services/theme_provider.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

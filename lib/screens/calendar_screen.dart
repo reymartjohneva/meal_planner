@@ -53,7 +53,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -718,6 +717,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         builder: (context, setState) {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           return AlertDialog(
+            backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -726,14 +726,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 Text(
                   'Add Meal',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
                 Text(
                   '${_selectedDay.day} ${_monthName(_selectedDay.month)} ${_selectedDay.year}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -741,42 +745,57 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Meal Type Dropdown
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+                      border: Border.all(
+                        color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                      color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButtonFormField<String>(
                         value: selectedMealType,
                         hint: Text(
                           'Select Meal Type',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        dropdownColor: isDarkMode ? Colors.grey.shade800 : Colors.white,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                          fontSize: 16,
                         ),
                         onChanged: (String? newValue) {
                           setState(() {
                             selectedMealType = newValue;
                           });
                         },
-                        items: _mealTypeOptions
-                            .map<DropdownMenuItem<String>>((String value) {
+                        items: _mealTypeOptions.map<DropdownMenuItem<String>>((String value) {
                           final color = isDarkMode
-                              ? (_mealTypeColors[value]?.shade700 ?? Colors.grey.shade700)
-                              : (_mealTypeColors[value]?.shade400 ?? Colors.grey.shade400);
+                              ? (_mealTypeColors[value]?.shade400 ?? Colors.grey.shade400)
+                              : (_mealTypeColors[value]?.shade600 ?? Colors.grey.shade600);
                           final icon = _mealTypeIcons[value] ?? Icons.restaurant;
 
                           return DropdownMenuItem<String>(
                             value: value,
                             child: Row(
                               children: [
-                                Icon(icon, color: color),
-                                const SizedBox(width: 8),
-                                Text(value, style: Theme.of(context).textTheme.bodyMedium),
+                                Icon(icon, color: color, size: 20),
+                                const SizedBox(width: 12),
+                                Text(
+                                  value,
+                                  style: TextStyle(
+                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -785,6 +804,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Description Field
                   TextFormField(
                     controller: descriptionController,
                     decoration: InputDecoration(
@@ -819,6 +840,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
+
+                  // Time Picker
                   InkWell(
                     onTap: () async {
                       final TimeOfDay? timeOfDay = await showTimePicker(
@@ -843,18 +866,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+                        border: Border.all(
+                          color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                        ),
+                        color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.access_time, color: Theme.of(context).textTheme.bodySmall?.color),
+                          Icon(
+                            Icons.access_time,
+                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             'Time',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                            ),
                           ),
                           const Spacer(),
                           Text(
@@ -876,8 +908,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               TextButton(
                 child: Text(
                   'Cancel',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -890,7 +922,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 child: const Text(
                   'Add Meal',
