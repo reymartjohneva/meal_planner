@@ -10,7 +10,7 @@ import 'firebase_options.dart';
 import 'pages/getting_started_page.dart';
 import 'services/firestore_service.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
@@ -30,8 +30,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.green,
+        primaryColor: Colors.green[500],  // Explicitly set lighter green
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
+          seedColor: Colors.green[500]!,  // Use lighter green here too
           brightness: Brightness.light,
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -47,14 +48,14 @@ class MyApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.green, width: 2),
+            borderSide: BorderSide(color: Colors.green[400]!, width: 2),  // lighter green border
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             foregroundColor: Colors.white,
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.green[400],  // lighter green button bg
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -63,7 +64,7 @@ class MyApp extends StatelessWidget {
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: Colors.green,
+            foregroundColor: Colors.green[400],  // lighter green text buttons
           ),
         ),
       ),

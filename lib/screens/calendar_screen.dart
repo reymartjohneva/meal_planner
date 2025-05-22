@@ -295,12 +295,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.today, size: 16, color: Colors.green[800]),
+            Icon(Icons.today, size: 16, color: Colors.green[500]),
             SizedBox(width: 4),
             Text(
               'Today',
               style: TextStyle(
-                color: Colors.green[800],
+                color: Colors.green[500],
                 fontWeight: FontWeight.bold,
               ),
             ),
