@@ -11,8 +11,6 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   // Simplified settings values
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
   String _measurementUnit = 'Metric';
 
   @override
@@ -126,19 +124,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSettingsCard(
                   child: Column(
                     children: [
-                      // Notifications
-                      _buildSwitchTile(
-                        'Notifications',
-                        'Enable app notifications',
-                        _notificationsEnabled,
-                        Icons.notifications_outlined,
-                            (value) {
-                          setState(() {
-                            _notificationsEnabled = value;
-                          });
-                        },
-                      ),
-                      const Divider(height: 1),
                       // Dark Mode
                       _buildSwitchTile(
                         'Dark Mode',
