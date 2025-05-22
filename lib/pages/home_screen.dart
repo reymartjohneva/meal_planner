@@ -516,9 +516,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
     // Theme colors based on dark mode state
-    final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
-    final secondaryColor = _isDarkMode ? Colors.amber.shade400 : Colors.amber.shade600;
-    final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
+    final primaryColor = _isDarkMode ? Colors.green.shade300 : Colors.green.shade600;
+    final secondaryColor = _isDarkMode ? Colors.lightGreen.shade400 : Colors.lightGreen.shade600;
+    final backgroundColor = _isDarkMode ? Colors.green.shade900 : Colors.green.shade50;
     final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
     final textColor = _isDarkMode ? Colors.white : Colors.black;
     final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
