@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-<<<<<<< HEAD
-import '../services/auth_service.dart';
-import 'profile_page.dart';
-=======
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
@@ -20,7 +16,6 @@ class _DateTimeHolder {
   DateTime dateTime;
   _DateTimeHolder(this.dateTime);
 }
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,39 +28,23 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _isDarkMode = false; // Track dark mode state
 
-<<<<<<< HEAD
-  // Empty meal journal list
-  final List<Map<String, dynamic>> _mealJournal = [];
-=======
   final FirestoreService _firestoreService = FirestoreService(); // Add Firestore service
 
   // New fields for reminders
   final NotificationService _notificationService = NotificationService();
   final List<MealReminder> _mealReminders = [];
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
   final List<String> _moodOptions = [
     'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
 
-<<<<<<< HEAD
-  void _addMeal() {
-    final _titleController = TextEditingController();
-    final _timeController = TextEditingController();
-    final _mealController = TextEditingController();
-    final _notesController = TextEditingController();
-    final _imageController = TextEditingController();
-    int? _satisfactionValue;
-    String? _selectedMood;
-=======
   final List<String> _mealTypeOptions = [
     'Breakfast',
     'Lunch',
     'Snack',
     'Dinner',
   ];
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
   @override
   void initState() {
@@ -160,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _showMealForm(
       context: context,
-        selectedMealType: meal['mealType'],
+      selectedMealType: meal['mealType'],
       descriptionController: _descriptionController,
       caloriesController: _caloriesController,
       dateTimeHolder: _dateTimeHolder,
@@ -207,10 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-<<<<<<< HEAD
-            return AlertDialog(
-              title: const Text('Add Meal Experience'),
-=======
 
             String _formatDateTimeDisplay() {
               final dt = dateTimeHolder.dateTime;
@@ -245,100 +220,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 if (pickedTime != null) {
                   // Combine date and time
-                    final DateTime selectedDateTime = DateTime(
+                  final DateTime selectedDateTime = DateTime(
                     pickedDate.year,
                     pickedDate.month,
                     pickedDate.day,
                     pickedTime.hour,
                     pickedTime.minute,
+                  );
+
+                  if (selectedDateTime.isBefore(now)) {
+                    // Show error message if selected time is in the past
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Cannot set meal time in the past. Using current time instead.'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
                     );
 
-                    if (selectedDateTime.isBefore(now)) {
-                      // Show error message if selected time is in the past
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Cannot set meal time in the past. Using current time instead.'),
-                          duration: Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-
-                      // Use current time instead
-                      setState(() {
-                        dateTimeHolder.dateTime = now;
-                      });
-                    } else {
-                      setState(() {
-                        dateTimeHolder.dateTime = selectedDateTime;
-                      });
-                    }
+                    // Use current time instead
+                    setState(() {
+                      dateTimeHolder.dateTime = now;
+                    });
+                  } else {
+                    setState(() {
+                      dateTimeHolder.dateTime = selectedDateTime;
+                    });
+                  }
                 }
               }
             }
 
             return AlertDialog(
               title: Text(isEditing ? 'Edit Meal' : 'Add Meal'),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
               content: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-<<<<<<< HEAD
-                    TextField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Meal Title'),
-                    ),
-                    TextField(
-                      controller: _timeController,
-                      decoration: const InputDecoration(labelText: 'Time'),
-                    ),
-                    TextField(
-                      controller: _mealController,
-                      decoration: const InputDecoration(labelText: 'What did you eat?'),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text('How satisfied were you? (1-5)'),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(5, (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _satisfactionValue = index + 1;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _satisfactionValue == index + 1
-                                  ? Colors.teal.shade300
-                                  : Colors.grey.shade200,
-                            ),
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                color: _satisfactionValue == index + 1
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text('How did you feel?'),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMood,
-                      hint: const Text('Select mood'),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedMood = newValue;
-                        });
-                      },
-                      items: _moodOptions
-=======
                     DropdownButtonFormField<String>(
                       value: selectedMealType,
                       hint: const Text('Select Meal Type'),
@@ -349,28 +267,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         });
                       },
                       items: _mealTypeOptions
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
                         );
                       }).toList(),
-<<<<<<< HEAD
-                    ),
-                    TextField(
-                      controller: _notesController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes on your experience',
-                        hintText: 'How did the meal make you feel?',
-                      ),
-                    ),
-                    TextField(
-                      controller: _imageController,
-                      decoration: const InputDecoration(labelText: 'Image Filename'),
-                    ),
-=======
                       decoration: const InputDecoration(labelText: 'Meal Type'),
                     ),
                     TextField(
@@ -417,7 +319,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   ],
                 ),
               ),
@@ -427,36 +328,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-<<<<<<< HEAD
-                  onPressed: () {
-                    if (_titleController.text.isNotEmpty &&
-                        _timeController.text.isNotEmpty &&
-                        _mealController.text.isNotEmpty) {
-                      setState(() {
-                        _mealJournal.add({
-                          'title': _titleController.text,
-                          'time': _timeController.text,
-                          'meal': _mealController.text,
-                          'satisfaction': _satisfactionValue,
-                          'mood': _selectedMood,
-                          'notes': _notesController.text,
-                          'image': _imageController.text.isNotEmpty
-                              ? _imageController.text
-                              : 'default_meal.png',
-                          'logged': false,
-                        });
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Add Experience'),
-=======
                   onPressed: () async {
                     print('Before saving, selected meal type: $_localSelectedMealType'); // Debug
                     await onSave(_localSelectedMealType);
                   },
                   child: Text(isEditing ? 'Update' : 'Add Meal'),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                 ),
               ],
             );
@@ -466,22 +342,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  void _logMeal(int index) {
-    if (_mealJournal[index]['satisfaction'] == null) {
-      _showSatisfactionDialog(index);
-    } else {
-      setState(() {
-        _mealJournal[index]['logged'] = !_mealJournal[index]['logged'];
-      });
-    }
-  }
-
-  void _showSatisfactionDialog(int index) {
-    int? _satisfactionValue = _mealJournal[index]['satisfaction'];
-    String? _selectedMood = _mealJournal[index]['mood'];
-    final _notesController = TextEditingController(text: _mealJournal[index]['notes'] ?? '');
-=======
   void _logMeal(String mealId, Map<String, dynamic> meal) {
     if (meal['satisfaction'] == null) {
       _showSatisfactionDialog(mealId, meal);
@@ -507,7 +367,6 @@ class _HomeScreenState extends State<HomeScreen> {
     int? _satisfactionValue = meal['satisfaction'];
     String? _selectedMood = meal['mood'];
     final _notesController = TextEditingController(text: meal['notes'] ?? '');
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     showDialog(
       context: context,
@@ -589,14 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
-<<<<<<< HEAD
-                      this.setState(() {
-                        _mealJournal[index]['satisfaction'] = _satisfactionValue;
-                        _mealJournal[index]['mood'] = _selectedMood;
-                        _mealJournal[index]['notes'] = _notesController.text;
-                        _mealJournal[index]['logged'] = true;
-                      });
-=======
                       final dateTime = meal['dateTime'] != null
                           ? (meal['dateTime'] as Timestamp).toDate()
                           : DateTime.now();
@@ -611,7 +462,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         mood: _selectedMood,
                         notes: _notesController.text,
                       );
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                       Navigator.pop(context);
                     }
                   },
@@ -625,10 +475,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  int _getLoggedCount() {
-    return _mealJournal.where((m) => m['logged'] == true).length;
-=======
   void _deleteMeal(String mealId) {
     showDialog(
       context: context,
@@ -663,19 +509,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _getLoggedCount(List<Map<String, dynamic>> meals) {
     return meals.where((m) => m['logged'] == true).length;
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
   }
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    final loggedCount = _getLoggedCount();
-    final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
-
-    final primaryColor = Colors.teal.shade600;
-    final secondaryColor = Colors.amber.shade600;
-    final backgroundColor = Colors.grey.shade50;
-=======
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
     // Theme colors based on dark mode state
@@ -685,7 +522,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
     final textColor = _isDarkMode ? Colors.white : Colors.black;
     final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -715,25 +551,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-<<<<<<< HEAD
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildWellnessInsights(primaryColor, secondaryColor),
-            const SizedBox(height: 25),
-            _buildHeader(today, primaryColor),
-            const SizedBox(height: 10),
-            _mealJournal.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _mealJournal.length,
-              itemBuilder: (context, index) {
-                final meal = _mealJournal[index];
-                return _buildMealCard(index, meal, primaryColor);
-              },
-=======
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestoreService.getMeals(),
         builder: (context, snapshot) {
@@ -777,7 +594,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 20),
               ],
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
           );
         },
@@ -823,42 +639,16 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         items: const [
-<<<<<<< HEAD
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Journal'),
-          BottomNavigationBarItem(icon: Icon(Icons.self_improvement_outlined), label: 'Wellness'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Community'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-=======
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chatbot'),
 
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
         ],
       ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-      child: Column(
-        children: [
-          Icon(
-              Icons.restaurant_outlined,
-              size: 80,
-              color: Colors.grey.shade400
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No meals added yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
-=======
   Widget _buildProgressBar(double progress) {
     final progressColor = progress < 0.3
         ? Colors.red
@@ -882,22 +672,14 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: Colors.grey.shade300,
               color: progressColor,
               minHeight: 12,
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
           ),
           const SizedBox(height: 8),
           Text(
-<<<<<<< HEAD
-            'Tap the + button to add your first meal experience',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-=======
             '${(progress * 100).toStringAsFixed(0)}% of meals logged',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: progressColor,
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
           ),
         ],
@@ -905,9 +687,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor) {
-=======
   Widget _buildEmptyState(Color subtitleColor) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -940,7 +719,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor, Color textColor) {
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
@@ -978,11 +756,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 24),
           Card(
-<<<<<<< HEAD
-            color: Colors.white,
-=======
             color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -1000,18 +774,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-<<<<<<< HEAD
-                  const Text(
-                    'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
-                    style: TextStyle(fontSize: 14),
-=======
                   Text(
                     'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
                     style: TextStyle(
                       fontSize: 14,
                       color: textColor,
                     ),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   ),
                 ],
               ),
@@ -1020,7 +788,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  } 
+  }
 
   Widget _buildHeader(String today, Color primaryColor, Color textColor, Color subtitleColor) {
     return Padding(
@@ -1031,9 +799,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-<<<<<<< HEAD
-              const Text('Meal Journal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-=======
               Text(
                   'Meal Journal',
                   style: TextStyle(
@@ -1041,7 +806,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontSize: 22,
                     color: textColor,
                   )),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
               const SizedBox(height: 4),
               Text(today, style: TextStyle(color: subtitleColor)),
             ],
@@ -1060,10 +824,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor) {
-    final isLogged = meal['logged'] == true;
-=======
   Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor, Color cardColor, Color textColor, Color subtitleColor) {
     final isLogged = meal['logged'] == true;
     final mealId = meal['id'];
@@ -1074,7 +834,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final formatter = DateFormat('MMM d, yyyy');
     final timeFormatter = DateFormat('h:mm a');
     final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     // Icon and color for satisfaction rating
     IconData satisfactionIcon = Icons.sentiment_neutral;
@@ -1099,18 +858,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       elevation: 2,
-<<<<<<< HEAD
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isLogged ? Colors.teal.shade200 : Colors.grey.shade300,
-=======
       color: cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isLogged ? Colors.teal.shade200 : _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           width: isLogged ? 2 : 1,
         ),
       ),
@@ -1119,20 +871,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: CircleAvatar(
               radius: 30,
-<<<<<<< HEAD
-              backgroundImage: AssetImage('assets/images/${meal['image']}'),
-            ),
-            title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${meal['time']} - ${meal['meal']}'),
-                if (isLogged && meal['mood'] != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text('Mood: ${meal['mood']}',
-                      style: TextStyle(fontStyle: FontStyle.italic),
-=======
               backgroundColor: primaryColor.withOpacity(0.2),
               child: Icon(
                 Icons.restaurant,
@@ -1166,27 +904,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontStyle: FontStyle.italic,
                         color: subtitleColor,
                       ),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                     ),
                   ),
               ],
             ),
-<<<<<<< HEAD
-            trailing: isLogged
-                ? Icon(satisfactionIcon, color: satisfactionColor, size: 30)
-                : ElevatedButton(
-              onPressed: () => _logMeal(index),
-              child: const Text('Log'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-            ),
-            onTap: () => _showMealDetails(meal),
-=======
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1195,7 +916,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             onTap: () => _showMealDetails(meal, mealId),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           ),
           if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
             Padding(
@@ -1203,20 +923,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-<<<<<<< HEAD
-                  const Divider(),
-=======
                   Divider(color: _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   Text(
                     '${meal['notes']}',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
-<<<<<<< HEAD
-                      color: Colors.grey.shade700,
-=======
                       color: subtitleColor,
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                       fontSize: 13,
                     ),
                   ),
@@ -1228,9 +940,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  void _showMealDetails(Map<String, dynamic> meal) {
-=======
   // Add the new popup menu builder
 
   // Show reminder dialog
@@ -1245,66 +954,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final timeFormatter = DateFormat('h:mm a');
     final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
 
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-<<<<<<< HEAD
-          title: Text(meal['title']),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (meal['image'] != null)
-                  Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: AssetImage('assets/images/${meal['image']}'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Text('Time: ${meal['time']}'),
-                Text('Food: ${meal['meal']}'),
-                if (meal['satisfaction'] != null)
-                  Text('Satisfaction: ${meal['satisfaction']}/5'),
-                if (meal['mood'] != null)
-                  Text('Mood: ${meal['mood']}'),
-                if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  const Text('Notes:'),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(meal['notes']),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            if (!meal['logged'])
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _logMeal(_mealJournal.indexOf(meal));
-                },
-                child: const Text('Log Meal'),
-              ),
-=======
           title: Text('Set Reminder for $mealTitle'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1339,16 +992,12 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: const Text('Set Reminder'),
             ),
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           ],
         );
       },
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildInsightCard(IconData icon, String label, String value, Color color) {
-=======
   // Build weekday selection chip
   Widget _buildWeekdayChip(
       StateSetter setState,
@@ -1768,19 +1417,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildInsightCard(IconData icon, String title, String status, Color iconColor) {
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     return Column(
       children: [
         Icon(icon, color: iconColor, size: 24),
         const SizedBox(height: 8),
-<<<<<<< HEAD
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
-      ],
-    );
-  }
-=======
         Text(
           title,
           style: const TextStyle(
@@ -1805,5 +1445,4 @@ class _HomeScreenState extends State<HomeScreen> {
 class _TimeHolder {
   TimeOfDay time;
   _TimeHolder(this.time);
->>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 }
