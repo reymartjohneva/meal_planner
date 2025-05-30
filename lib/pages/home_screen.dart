@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+<<<<<<< HEAD
 import '../services/auth_service.dart';
 import 'profile_page.dart';
+=======
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
+import '../models/meal_reminder.dart';
+import 'profile_page.dart';
+
+import '../screens/calendar_screen.dart';
+import '../screens/grocery_page.dart';
+import '../screens/chatbot_page.dart';
+
+// Helper class to hold DateTime
+class _DateTimeHolder {
+  DateTime dateTime;
+  _DateTimeHolder(this.dateTime);
+}
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,15 +31,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  bool _isDarkMode = false; // Track dark mode state
 
+<<<<<<< HEAD
   // Empty meal journal list
   final List<Map<String, dynamic>> _mealJournal = [];
+=======
+  final FirestoreService _firestoreService = FirestoreService(); // Add Firestore service
+
+  // New fields for reminders
+  final NotificationService _notificationService = NotificationService();
+  final List<MealReminder> _mealReminders = [];
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
   final List<String> _moodOptions = [
     'Energized', 'Content', 'Satisfied', 'Neutral', 'Distracted',
     'Stressed', 'Anxious', 'Tired', 'Joyful', 'Rushed'
   ];
 
+<<<<<<< HEAD
   void _addMeal() {
     final _titleController = TextEditingController();
     final _timeController = TextEditingController();
@@ -29,18 +58,232 @@ class _HomeScreenState extends State<HomeScreen> {
     final _imageController = TextEditingController();
     int? _satisfactionValue;
     String? _selectedMood;
+=======
+  final List<String> _mealTypeOptions = [
+    'Breakfast',
+    'Lunch',
+    'Snack',
+    'Dinner',
+  ];
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+    // Other initialization...
+
+  }
+
+  Future<void> _initializeNotifications() async {
+    await _notificationService.init();
+    await _notificationService.requestPermissions();
+    // TODO: Load saved reminders from storage
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
+
+  void _addMeal() {
+    final _descriptionController = TextEditingController();
+    final _caloriesController = TextEditingController();
+
+    // Use a wrapper for the TimeOfDay that can be updated
+    final _dateTimeHolder = _DateTimeHolder(DateTime.now());
+
+    _showMealForm(
+      context: context,
+      selectedMealType: null,
+      descriptionController: _descriptionController,
+      caloriesController: _caloriesController,
+      dateTimeHolder: _dateTimeHolder,
+      onSave: (String? updatedMealType) async {
+
+        print('Updated Meal Type: $updatedMealType');
+        print('Description: ${_descriptionController.text}');
+        print('Calories: ${_caloriesController.text}');
+
+        if (updatedMealType != null &&
+            _descriptionController.text.isNotEmpty &&
+            _caloriesController.text.isNotEmpty) {
+          try {
+            await _firestoreService.addMeal(
+              mealType: updatedMealType,
+              description: _descriptionController.text,
+              dateTime: _dateTimeHolder.dateTime,
+              calories: int.parse(_caloriesController.text),
+            );
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Meal added successfully!'),
+                duration: Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error adding meal: $e'),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red, // Optional: Highlight error
+              ),
+            );
+          }
+        } else {
+          // Show validation error if fields are missing
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in all fields'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.orange, // Optional: Warning color
+            ),
+          );
+        }
+      },
+      isEditing: false,
+    );
+  }
+
+  void _editMeal(String mealId, Map<String, dynamic> meal) {
+    final _descriptionController = TextEditingController(text: meal['description']);
+    final _caloriesController = TextEditingController(text: meal['calories'].toString());
+    final dateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
+    final _dateTimeHolder = _DateTimeHolder(dateTime);
+
+    _showMealForm(
+      context: context,
+        selectedMealType: meal['mealType'],
+      descriptionController: _descriptionController,
+      caloriesController: _caloriesController,
+      dateTimeHolder: _dateTimeHolder,
+      onSave: (String? updatedMealType) async {
+        if (updatedMealType != null &&
+            _descriptionController.text.isNotEmpty &&
+            _caloriesController.text.isNotEmpty) {
+          try {
+            await _firestoreService.updateMeal(
+              mealId: mealId,
+              mealType: updatedMealType,
+              description: _descriptionController.text,
+              dateTime: _dateTimeHolder.dateTime,
+              calories: int.parse(_caloriesController.text),
+              logged: meal['logged'],
+              satisfaction: meal['satisfaction'],
+              mood: meal['mood'],
+              notes: meal['notes'],
+            );
+            Navigator.pop(context);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating meal: $e')),
+            );
+          }
+        }
+      },
+      isEditing: true,
+    );
+  }
+
+  void _showMealForm({
+    required BuildContext context,
+    required String? selectedMealType,
+    required TextEditingController descriptionController,
+    required TextEditingController caloriesController,
+    required _DateTimeHolder dateTimeHolder,
+    required Future<void> Function(String?) onSave,
+    required bool isEditing,
+  }) {
+    String? _localSelectedMealType = selectedMealType;
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+<<<<<<< HEAD
             return AlertDialog(
               title: const Text('Add Meal Experience'),
+=======
+
+            String _formatDateTimeDisplay() {
+              final dt = dateTimeHolder.dateTime;
+              final date = "${dt.day}/${dt.month}/${dt.year}";
+              final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+              final minute = dt.minute.toString().padLeft(2, '0');
+              final period = dt.hour >= 12 ? 'PM' : 'AM';
+              return "$date at $hour:$minute $period";
+            }
+
+            // Method to select date and time together
+            Future<void> _selectDateTime(BuildContext context) async {
+
+              final DateTime now = DateTime.now();
+              final DateTime initialDate = dateTimeHolder.dateTime.isBefore(now) ? now : dateTimeHolder.dateTime;
+
+
+              // First select date
+              final DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: initialDate,
+                firstDate: now, // Set firstDate to today, preventing selection of past dates
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+
+              if (pickedDate != null) {
+                // Then select time
+                final TimeOfDay? pickedTime = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.fromDateTime(dateTimeHolder.dateTime),
+                );
+
+                if (pickedTime != null) {
+                  // Combine date and time
+                    final DateTime selectedDateTime = DateTime(
+                    pickedDate.year,
+                    pickedDate.month,
+                    pickedDate.day,
+                    pickedTime.hour,
+                    pickedTime.minute,
+                    );
+
+                    if (selectedDateTime.isBefore(now)) {
+                      // Show error message if selected time is in the past
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cannot set meal time in the past. Using current time instead.'),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+
+                      // Use current time instead
+                      setState(() {
+                        dateTimeHolder.dateTime = now;
+                      });
+                    } else {
+                      setState(() {
+                        dateTimeHolder.dateTime = selectedDateTime;
+                      });
+                    }
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: Text(isEditing ? 'Edit Meal' : 'Add Meal'),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
               content: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+<<<<<<< HEAD
                     TextField(
                       controller: _titleController,
                       decoration: const InputDecoration(labelText: 'Meal Title'),
@@ -95,12 +338,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         });
                       },
                       items: _moodOptions
+=======
+                    DropdownButtonFormField<String>(
+                      value: selectedMealType,
+                      hint: const Text('Select Meal Type'),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _localSelectedMealType = newValue;
+                          print('Dropdown changed to: $_localSelectedMealType');
+                        });
+                      },
+                      items: _mealTypeOptions
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
                         );
                       }).toList(),
+<<<<<<< HEAD
                     ),
                     TextField(
                       controller: _notesController,
@@ -114,6 +370,54 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: _imageController,
                       decoration: const InputDecoration(labelText: 'Image Filename'),
                     ),
+=======
+                      decoration: const InputDecoration(labelText: 'Meal Type'),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                      maxLines: 2,
+                    ),
+                    TextField(
+                      controller: caloriesController,
+                      decoration: const InputDecoration(labelText: 'Calories'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+
+                    InkWell(
+                      onTap: () => _selectDateTime(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Date & Time',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatDateTimeDisplay(),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            const Icon(Icons.calendar_today),
+                          ],
+                        ),
+                      ),
+                    ),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   ],
                 ),
               ),
@@ -123,6 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
+<<<<<<< HEAD
                   onPressed: () {
                     if (_titleController.text.isNotEmpty &&
                         _timeController.text.isNotEmpty &&
@@ -145,6 +450,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   },
                   child: const Text('Add Experience'),
+=======
+                  onPressed: () async {
+                    print('Before saving, selected meal type: $_localSelectedMealType'); // Debug
+                    await onSave(_localSelectedMealType);
+                  },
+                  child: Text(isEditing ? 'Update' : 'Add Meal'),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                 ),
               ],
             );
@@ -154,6 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   void _logMeal(int index) {
     if (_mealJournal[index]['satisfaction'] == null) {
       _showSatisfactionDialog(index);
@@ -168,6 +481,33 @@ class _HomeScreenState extends State<HomeScreen> {
     int? _satisfactionValue = _mealJournal[index]['satisfaction'];
     String? _selectedMood = _mealJournal[index]['mood'];
     final _notesController = TextEditingController(text: _mealJournal[index]['notes'] ?? '');
+=======
+  void _logMeal(String mealId, Map<String, dynamic> meal) {
+    if (meal['satisfaction'] == null) {
+      _showSatisfactionDialog(mealId, meal);
+    } else {
+      final dateTime = meal['dateTime'] != null
+          ? (meal['dateTime'] as Timestamp).toDate()
+          : DateTime.now();
+      _firestoreService.updateMeal(
+        mealId: mealId,
+        mealType: meal['mealType'],
+        description: meal['description'],
+        dateTime: dateTime,
+        calories: meal['calories'],
+        logged: !meal['logged'],
+        satisfaction: meal['satisfaction'],
+        mood: meal['mood'],
+        notes: meal['notes'],
+      );
+    }
+  }
+
+  void _showSatisfactionDialog(String mealId, Map<String, dynamic> meal) {
+    int? _satisfactionValue = meal['satisfaction'];
+    String? _selectedMood = meal['mood'];
+    final _notesController = TextEditingController(text: meal['notes'] ?? '');
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     showDialog(
       context: context,
@@ -249,12 +589,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_satisfactionValue != null) {
+<<<<<<< HEAD
                       this.setState(() {
                         _mealJournal[index]['satisfaction'] = _satisfactionValue;
                         _mealJournal[index]['mood'] = _selectedMood;
                         _mealJournal[index]['notes'] = _notesController.text;
                         _mealJournal[index]['logged'] = true;
                       });
+=======
+                      final dateTime = meal['dateTime'] != null
+                          ? (meal['dateTime'] as Timestamp).toDate()
+                          : DateTime.now();
+                      _firestoreService.updateMeal(
+                        mealId: mealId,
+                        mealType: meal['mealType'],
+                        description: meal['description'],
+                        dateTime: dateTime,
+                        calories: meal['calories'],
+                        logged: true,
+                        satisfaction: _satisfactionValue,
+                        mood: _selectedMood,
+                        notes: _notesController.text,
+                      );
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                       Navigator.pop(context);
                     }
                   },
@@ -268,18 +625,67 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   int _getLoggedCount() {
     return _mealJournal.where((m) => m['logged'] == true).length;
+=======
+  void _deleteMeal(String mealId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Meal'),
+        content: const Text('Are you sure you want to delete this meal?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await _firestoreService.deleteMeal(mealId);
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting meal: $e')),
+                );
+              }
+            },
+            child: const Text('Delete'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _getLoggedCount(List<Map<String, dynamic>> meals) {
+    return meals.where((m) => m['logged'] == true).length;
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
   }
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     final loggedCount = _getLoggedCount();
     final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
 
     final primaryColor = Colors.teal.shade600;
     final secondaryColor = Colors.amber.shade600;
     final backgroundColor = Colors.grey.shade50;
+=======
+    final today = DateFormat('EEEE, MMMM d, y').format(DateTime.now());
+
+    // Theme colors based on dark mode state
+    final primaryColor = _isDarkMode ? Colors.green.shade300 : Colors.green.shade600;
+    final secondaryColor = _isDarkMode ? Colors.lightGreen.shade400 : Colors.lightGreen.shade600;
+    final backgroundColor = _isDarkMode ? Colors.white : Colors.white;
+    final cardColor = _isDarkMode ? Colors.grey.shade800 : Colors.white;
+    final textColor = _isDarkMode ? Colors.white : Colors.black;
+    final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -289,11 +695,15 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Add this line to remove the back button
         actions: [
+          // Theme toggle button
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: _toggleTheme,
+            tooltip: _isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
           ),
+
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () {
@@ -305,6 +715,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+<<<<<<< HEAD
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -322,10 +733,54 @@ class _HomeScreenState extends State<HomeScreen> {
                 final meal = _mealJournal[index];
                 return _buildMealCard(index, meal, primaryColor);
               },
+=======
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestoreService.getMeals(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final meals = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+
+          final loggedCount = _getLoggedCount(meals);
+          final totalMeals = meals.length;
+          final progress = totalMeals > 0 ? loggedCount / totalMeals : 0.0;
+
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildWellnessInsights(primaryColor, secondaryColor, textColor),
+                const SizedBox(height: 25),
+                _buildHeader(today, primaryColor, textColor, subtitleColor),
+                const SizedBox(height: 10),
+                _buildProgressBar(progress),
+                const SizedBox(height: 10),
+                meals.isEmpty
+                    ? _buildEmptyState(subtitleColor)
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: meals.length,
+                  itemBuilder: (context, index) {
+                    final meal = meals[index];
+                    return _buildMealCard(index, meal, primaryColor, cardColor, textColor, subtitleColor);
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addMeal,
@@ -336,18 +791,56 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: primaryColor,
-        unselectedItemColor: Colors.grey.shade500,
-        onTap: (index) => setState(() => _currentIndex = index),
+        unselectedItemColor: _isDarkMode ? Colors.grey.shade400 : Colors.grey.shade500,
+        backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.white,
+        type: BottomNavigationBarType.fixed, // Added to support 5 items
+        onTap: (index) {
+          if (index == 1) { // Calendar tab
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CalendarScreen(reminders: _mealReminders),
+              ),
+            );
+          } else if (index == 2) { // Grocery tab
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroceryPage(), // Navigate to Grocery Page
+              ),
+            );
+          } else if (index == 3) { // Chatbot tab
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatbotPage(), // Navigate to Chatbot Page
+              ),
+            );
+          } else {
+            setState(() {
+              _currentIndex = index; // Update the current index for other tabs
+            });
+          }
+        },
         items: const [
+<<<<<<< HEAD
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Journal'),
           BottomNavigationBarItem(icon: Icon(Icons.self_improvement_outlined), label: 'Wellness'),
           BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Community'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+=======
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'Calendar'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chatbot'),
+
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -365,14 +858,46 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.grey.shade700,
+=======
+  Widget _buildProgressBar(double progress) {
+    final progressColor = progress < 0.3
+        ? Colors.red
+        : progress < 0.7
+        ? Colors.amber
+        : Colors.teal;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          const Text(
+            'Meal Logging Progress',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade300,
+              color: progressColor,
+              minHeight: 12,
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
           ),
           const SizedBox(height: 8),
           Text(
+<<<<<<< HEAD
             'Tap the + button to add your first meal experience',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey.shade600,
+=======
+            '${(progress * 100).toStringAsFixed(0)}% of meals logged',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: progressColor,
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             ),
           ),
         ],
@@ -380,7 +905,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor) {
+=======
+  Widget _buildEmptyState(Color subtitleColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: Column(
+        children: [
+          Icon(
+              Icons.restaurant_outlined,
+              size: 80,
+              color: _isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'No meals added yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap the + button to add your first meal',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: subtitleColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWellnessInsights(Color primaryColor, Color secondaryColor, Color textColor) {
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
@@ -418,7 +978,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 24),
           Card(
+<<<<<<< HEAD
             color: Colors.white,
+=======
+            color: _isDarkMode ? Colors.grey.shade800 : Colors.white,
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -436,9 +1000,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+<<<<<<< HEAD
                   const Text(
                     'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
                     style: TextStyle(fontSize: 14),
+=======
+                  Text(
+                    'Try to eat mindfully today. Notice the tastes, textures, and feelings during your meals.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: textColor,
+                    ),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   ),
                 ],
               ),
@@ -447,9 +1020,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
+  } 
 
-  Widget _buildHeader(String today, Color primaryColor) {
+  Widget _buildHeader(String today, Color primaryColor, Color textColor, Color subtitleColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -458,9 +1031,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+<<<<<<< HEAD
               const Text('Meal Journal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+=======
+              Text(
+                  'Meal Journal',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: textColor,
+                  )),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
               const SizedBox(height: 4),
-              Text(today, style: TextStyle(color: Colors.grey.shade600)),
+              Text(today, style: TextStyle(color: subtitleColor)),
             ],
           ),
           OutlinedButton.icon(
@@ -477,8 +1060,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor) {
     final isLogged = meal['logged'] == true;
+=======
+  Widget _buildMealCard(int index, Map<String, dynamic> meal, Color primaryColor, Color cardColor, Color textColor, Color subtitleColor) {
+    final isLogged = meal['logged'] == true;
+    final mealId = meal['id'];
+
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
+    final formatter = DateFormat('MMM d, yyyy');
+    final timeFormatter = DateFormat('h:mm a');
+    final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 
     // Icon and color for satisfaction rating
     IconData satisfactionIcon = Icons.sentiment_neutral;
@@ -503,10 +1099,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       elevation: 2,
+<<<<<<< HEAD
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isLogged ? Colors.teal.shade200 : Colors.grey.shade300,
+=======
+      color: cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isLogged ? Colors.teal.shade200 : _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           width: isLogged ? 2 : 1,
         ),
       ),
@@ -515,6 +1119,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: CircleAvatar(
               radius: 30,
+<<<<<<< HEAD
               backgroundImage: AssetImage('assets/images/${meal['image']}'),
             ),
             title: Text(meal['title'], style: TextStyle(fontWeight: FontWeight.bold)),
@@ -527,10 +1132,46 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text('Mood: ${meal['mood']}',
                       style: TextStyle(fontStyle: FontStyle.italic),
+=======
+              backgroundColor: primaryColor.withOpacity(0.2),
+              child: Icon(
+                Icons.restaurant,
+                color: primaryColor,
+              ),
+            ),
+            title: Text(
+                meal['mealType'],
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                )
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$dateTimeStr',
+                  style: TextStyle(color: subtitleColor),
+                ),
+                Text(
+                  'Calories: ${meal['calories']}',
+                  style: TextStyle(color: subtitleColor),
+                ),
+                if (isLogged && meal['mood'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Mood: ${meal['mood']}',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: subtitleColor,
+                      ),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                     ),
                   ),
               ],
             ),
+<<<<<<< HEAD
             trailing: isLogged
                 ? Icon(satisfactionIcon, color: satisfactionColor, size: 30)
                 : ElevatedButton(
@@ -545,6 +1186,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             onTap: () => _showMealDetails(meal),
+=======
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLogged)
+                  Icon(satisfactionIcon, color: satisfactionColor, size: 50)
+              ],
+            ),
+            onTap: () => _showMealDetails(meal, mealId),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           ),
           if (isLogged && meal['notes'] != null && meal['notes'].isNotEmpty)
             Padding(
@@ -552,12 +1203,20 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+<<<<<<< HEAD
                   const Divider(),
+=======
+                  Divider(color: _isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                   Text(
                     '${meal['notes']}',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
+<<<<<<< HEAD
                       color: Colors.grey.shade700,
+=======
+                      color: subtitleColor,
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
                       fontSize: 13,
                     ),
                   ),
@@ -569,11 +1228,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+<<<<<<< HEAD
   void _showMealDetails(Map<String, dynamic> meal) {
+=======
+  // Add the new popup menu builder
+
+  // Show reminder dialog
+  void _showReminderConfirmationDialog(String mealId, Map<String, dynamic> meal) {
+    final mealTitle = meal['mealType'];
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
+
+    // Format date and time for display
+    final formatter = DateFormat('EEEE, MMMM d');
+    final timeFormatter = DateFormat('h:mm a');
+    final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
+
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
+<<<<<<< HEAD
           title: Text(meal['title']),
           content: SingleChildScrollView(
             child: Column(
@@ -627,21 +1304,506 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 child: const Text('Log Meal'),
               ),
+=======
+          title: Text('Set Reminder for $mealTitle'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Do you want to set a reminder for:'),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.restaurant),
+                title: Text(mealTitle),
+                subtitle: Text(dateTimeStr),
+              ),
+              const SizedBox(height: 8),
+              Text('Reminder will be set for the time you entered when adding this meal.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _saveReminder(
+                  meal: meal,
+                  mealId: mealId,
+                );
+                Navigator.pop(context);
+                _showReminderSetConfirmation();
+              },
+              child: const Text('Set Reminder'),
+            ),
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
           ],
         );
       },
     );
   }
 
+<<<<<<< HEAD
   Widget _buildInsightCard(IconData icon, String label, String value, Color color) {
+=======
+  // Build weekday selection chip
+  Widget _buildWeekdayChip(
+      StateSetter setState,
+      List<bool> selectedWeekdays,
+      int index,
+      String label,
+      ) {
+    return FilterChip(
+      label: Text(label),
+      selected: selectedWeekdays[index],
+      onSelected: (bool selected) {
+        setState(() {
+          selectedWeekdays[index] = selected;
+        });
+      },
+      selectedColor: Colors.teal.shade100,
+      checkmarkColor: Colors.teal,
+    );
+  }
+
+  void _showReminderSetConfirmation() {
+    final snackBar = SnackBar(
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Reminder set successfully!'),
+
+        ],
+      ),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(
+        label: 'DISMISS',
+        onPressed: () {},
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  // Save the reminder
+  void _saveReminder({
+    required Map<String, dynamic> meal,
+    required String mealId,
+  }) {
+    final int reminderId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+    final mealDateTime = meal['dateTime'] != null
+        ? (meal['dateTime'] as Timestamp).toDate()
+        : DateTime.now();
+
+    final reminderTime = TimeOfDay(
+      hour: mealDateTime.hour,
+      minute: mealDateTime.minute,
+    );
+
+    // Create the reminder object
+    final reminder = MealReminder(
+      id: reminderId,
+      mealId: mealId,
+      mealTitle: meal['mealType'],
+      description: meal['description'],
+      reminderTime: reminderTime,
+      scheduledDate: mealDateTime,
+      isRepeating: false, // Set to false by default
+      weekdays: List.filled(7, false), // Not using weekdays for meal-specific reminders
+    );
+
+    setState(() {
+      _mealReminders.add(reminder);
+    });
+
+    // Schedule the notification
+    _scheduleReminder(reminder);
+  }
+
+
+  // Schedule a reminder notification
+  void _scheduleReminder(MealReminder reminder) async {
+    final now = DateTime.now();
+
+    if (reminder.isRepeating) {
+      // For repeating reminders, schedule for each selected weekday
+      for (int i = 0; i < 7; i++) {
+        if (reminder.weekdays[i]) {
+          // Calculate next occurrence of this weekday
+          final nextDate = _getNextDateForWeekday(i);
+          final scheduledTime = DateTime(
+            nextDate.year,
+            nextDate.month,
+            nextDate.day,
+            reminder.reminderTime.hour,
+            reminder.reminderTime.minute,
+          );
+
+          // Create a unique ID for each weekday reminder
+          final uniqueId = reminder.id + (i * 1000);
+
+          await _notificationService.scheduleMealReminder(
+            id: uniqueId,
+            title: 'Meal Reminder',
+            mealName: reminder.mealTitle,
+            scheduledTime: scheduledTime,
+            description: 'Time for your ${reminder.mealTitle}!',
+          );
+        }
+      }
+    } else {
+      // For one-time reminders
+      if (reminder.scheduledDate.isAfter(now)) {
+        await _notificationService.scheduleMealReminder(
+          id: reminder.id,
+          title: 'Meal Reminder',
+          mealName: reminder.mealTitle,
+          scheduledTime: reminder.scheduledDate,
+          description: 'Time for your ${reminder.mealTitle}!',
+        );
+      }
+    }
+  }
+
+  // Get the next date for a given weekday (0 = Monday, 6 = Sunday)
+  DateTime _getNextDateForWeekday(int weekday) {
+    DateTime date = DateTime.now();
+
+    // Convert to 1-7 format where 1 is Monday and 7 is Sunday
+    int currentWeekday = date.weekday;
+
+    // Convert input weekday from 0-6 to 1-7
+    int targetWeekday = weekday + 1;
+
+    // Calculate days to add
+    int daysToAdd = targetWeekday - currentWeekday;
+    if (daysToAdd <= 0) {
+      daysToAdd += 7;
+    }
+
+    return date.add(Duration(days: daysToAdd));
+  }
+
+  // Show confirmation after setting a reminder
+  void _showReminderConfirmation() {
+    final snackBar = SnackBar(
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Reminder set successfully!'),
+
+        ],
+      ),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(
+        label: 'DISMISS',
+        onPressed: () {},
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+
+
+  // Delete a reminder
+  void _deleteReminder(int id) {
+    setState(() {
+      _mealReminders.removeWhere((reminder) => reminder.id == id);
+    });
+
+    // Cancel the notification
+    _notificationService.cancelReminder(id);
+
+    // For repeating reminders, cancel all related weekday reminders
+    for (int i = 0; i < 7; i++) {
+      _notificationService.cancelReminder(id + (i * 1000));
+    }
+
+    // TODO: Save to persistent storage in a real app
+    // _saveRemindersToStorage();
+  }
+
+  // Show meal details
+  void _showMealDetails(Map<String, dynamic> meal, String mealId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final isLogged = meal['logged'] == true;
+        final primaryColor = _isDarkMode ? Colors.teal.shade300 : Colors.teal.shade600;
+        final backgroundColor = _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50;
+        final textColor = _isDarkMode ? Colors.white : Colors.black;
+        final subtitleColor = _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade600;
+
+        final mealDateTime = meal['dateTime'] != null
+            ? (meal['dateTime'] as Timestamp).toDate()
+            : DateTime.now();
+        final formatter = DateFormat('EEEE, MMMM d, yyyy');
+        final timeFormatter = DateFormat('h:mm a');
+        final dateTimeStr = '${formatter.format(mealDateTime)} at ${timeFormatter.format(mealDateTime)}';
+
+        // Satisfaction emoji and text
+        String satisfactionEmoji = '😐';
+        String satisfactionText = 'Neutral';
+
+        if (meal['satisfaction'] != null) {
+          if (meal['satisfaction'] >= 5) {
+            satisfactionEmoji = '😁';
+            satisfactionText = 'Excellent';
+          } else if (meal['satisfaction'] >= 4) {
+            satisfactionEmoji = '🙂';
+            satisfactionText = 'Good';
+          } else if (meal['satisfaction'] >= 3) {
+            satisfactionEmoji = '😐';
+            satisfactionText = 'Neutral';
+          } else if (meal['satisfaction'] >= 2) {
+            satisfactionEmoji = '😕';
+            satisfactionText = 'Not Great';
+          } else {
+            satisfactionEmoji = '😞';
+            satisfactionText = 'Poor';
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          color: backgroundColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    meal['mealType'],
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 16, color: subtitleColor),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      dateTimeStr,
+                      style: TextStyle(color: subtitleColor),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(Icons.local_fire_department, size: 16, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${meal['calories']} calories',
+                    style: TextStyle(color: subtitleColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Description',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                meal['description'],
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              if (isLogged) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Satisfaction',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              satisfactionEmoji,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$satisfactionText (${meal['satisfaction']}/5)',
+                              style: TextStyle(color: subtitleColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (meal['mood'] != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mood',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              meal['mood'],
+                              style: TextStyle(color: primaryColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (meal['notes'] != null && meal['notes'].isNotEmpty) ...[
+                  Text(
+                    'Notes',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    meal['notes'],
+                    style: TextStyle(
+                      color: textColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ] else ...[
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _logMeal(mealId, meal);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('Log This Meal'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showReminderConfirmationDialog(mealId, meal);
+                    },
+                    icon: const Icon(Icons.alarm),
+                    label: const Text('Set Reminder'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _editMeal(mealId, meal);
+                    },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInsightCard(IconData icon, String title, String status, Color iconColor) {
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
     return Column(
       children: [
-        Icon(icon, color: color, size: 40),
+        Icon(icon, color: iconColor, size: 24),
         const SizedBox(height: 8),
+<<<<<<< HEAD
         Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
         const SizedBox(height: 4),
         Text(label, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
       ],
     );
   }
+=======
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          status,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Helper class for TimeOfDay selection
+class _TimeHolder {
+  TimeOfDay time;
+  _TimeHolder(this.time);
+>>>>>>> bc5a1de40c7490cc65f78316410221f9afe36f0e
 }
